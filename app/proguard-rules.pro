@@ -32,3 +32,10 @@
 # OkHttp
 -dontwarn okhttp3.**
 -dontwarn okio.**
+
+# PDFBox optional dependencies
+-dontwarn com.gemalto.jp2.JP2Decoder
+
+# TensorFlow Lite (unused but referenced)
+-dontwarn org.tensorflow.lite.gpu.GpuDelegateFactory**
+-dontwarn org.tensorflow.lite.**
