@@ -1,9 +1,9 @@
 package com.example.innovexia.subscriptions.stripe
 
 import android.os.Build
+import com.example.innovexia.BuildConfig
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -43,12 +43,26 @@ object BillingRetrofitClient {
         .setLenient()
         .create()
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
-    }
-
     private val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
+        .apply {
+            // Only add logging interceptor in debug builds
+            // HttpLoggingInterceptor is not available in release builds
+            if (BuildConfig.DEBUG) {
+                try {
+                    val loggingInterceptor = Class.forName("okhttp3.logging.HttpLoggingInterceptor")
+                        .getDeclaredConstructor()
+                        .newInstance()
+                    val levelMethod = loggingInterceptor.javaClass.getMethod("setLevel", Class.forName("okhttp3.logging.HttpLoggingInterceptor\$Level"))
+                    val levelEnum = Class.forName("okhttp3.logging.HttpLoggingInterceptor\$Level")
+                        .getField("BODY")
+                        .get(null)
+                    levelMethod.invoke(loggingInterceptor, levelEnum)
+                    addInterceptor(loggingInterceptor as okhttp3.Interceptor)
+                } catch (e: Exception) {
+                    // Logging interceptor not available, continue without it
+                }
+            }
+        }
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
