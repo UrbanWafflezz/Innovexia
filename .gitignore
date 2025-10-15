@@ -33,9 +33,11 @@ keystore.properties
 *.apk
 *.aab
 
-# Google Services JSON (contains Firebase config)
-# Uncomment if you want to keep it private
-# google-services.json
+# Google Services JSON (contains Firebase config - KEEP PRIVATE!)
+google-services.json
+app/google-services.json
+gradle/google-services.json
+**/google-services.json
 
 # Firebase Admin SDK credentials (NEVER commit!)
 gradle/*firebase-adminsdk*.json
