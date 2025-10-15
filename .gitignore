@@ -111,3 +111,16 @@ app/src/main/**/*.json
 
 # Hide proguard rules
 app/proguard-rules.pro
+
+# Hide IDE settings
+.idea/
+.claude/
+
+# Hide documentation
+docs/
+
+# Hide example files
+*.example
+
+# Hide stripe server folder
+stripe-server/
