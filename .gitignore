@@ -43,3 +43,69 @@ gradle/*firebase-adminsdk*.json
 
 # Secrets and API keys
 secrets.properties
+
+# ============================================
+# HIDE SOURCE CODE - Keep code private
+# ============================================
+
+# Hide all Kotlin/Java source code
+app/src/main/java/**/*.kt
+app/src/main/java/**/*.java
+app/src/debug/java/**/*.kt
+app/src/debug/java/**/*.java
+app/src/release/java/**/*.kt
+app/src/release/java/**/*.java
+
+# Hide all test code
+app/src/test/**/*.kt
+app/src/test/**/*.java
+app/src/androidTest/**/*.kt
+app/src/androidTest/**/*.java
+
+# Hide all XML layouts and resources
+app/src/main/res/layout/**/*.xml
+app/src/main/res/layout-land/**/*.xml
+app/src/main/res/layout-night/**/*.xml
+app/src/main/res/values/**/*.xml
+app/src/main/res/values-night/**/*.xml
+app/src/main/res/drawable/**/*
+app/src/main/res/drawable-*/**/*
+app/src/main/res/mipmap-*/**/*
+app/src/main/res/color/**/*.xml
+app/src/main/res/menu/**/*.xml
+app/src/main/res/navigation/**/*.xml
+app/src/main/res/anim/**/*.xml
+app/src/main/res/animator/**/*.xml
+
+# Hide AndroidManifest.xml (contains app structure)
+app/src/main/AndroidManifest.xml
+app/src/debug/AndroidManifest.xml
+app/src/release/AndroidManifest.xml
+
+# Hide assets
+app/src/main/assets/**/*
+
+# Hide raw resources
+app/src/main/res/raw/**/*
+
+# Hide all documentation and markdown files (except README.md)
+*.md
+!README.md
+
+# Hide gradle configuration files
+app/build.gradle.kts
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+
+# Hide all shell scripts
+*.sh
+
+# Hide Firebase rules
+*.rules
+
+# Hide all JSON config files
+app/src/main/**/*.json
+
+# Hide proguard rules
+app/proguard-rules.pro
