@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function authed() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return authed() && request.auth.uid == uid;
+    }
+
+    // User-scoped storage: all paths under /users/{uid}/
+    match /users/{uid}/{allPaths=**} {
+      allow read, write: if isOwner(uid);
+    }
+  }
+}

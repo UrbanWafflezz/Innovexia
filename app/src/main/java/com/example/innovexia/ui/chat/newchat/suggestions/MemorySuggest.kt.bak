@@ -1,0 +1,89 @@
+package com.example.innovexia.ui.chat.newchat.suggestions
+
+import com.example.innovexia.R
+import com.example.innovexia.memory.Mind.api.MemoryHit
+import com.example.innovexia.memory.Mind.api.MemoryKind
+import com.example.innovexia.memory.Mind.sources.store.entities.SourceEntity
+
+/**
+ * Heuristics-based suggestion generator from memories and sources
+ */
+object MemorySuggest {
+
+    /**
+     * Generate suggestions from memories and sources
+     */
+    fun from(
+        memories: List<MemoryHit>,
+        sources: List<SourceEntity>,
+        personaId: String
+    ): List<SuggestionCardUi> {
+        val out = mutableListOf<SuggestionCardUi>()
+
+        // A) Continue tasks (events/projects)
+        memories
+            .filter { it.kind in listOf(MemoryKind.PROJECT, MemoryKind.EVENT, MemoryKind.TASK) }
+            .take(2)
+            .forEach { memory ->
+                out += SuggestionCardUi(
+                    id = "m-${memory.id}",
+                    kind = SuggestionKind.CONTINUE_TASK,
+                    title = "Continue: ${titleize(memory.text)}",
+                    subtitle = "From your recent chat",
+                    icon = R.drawable.ic_play,
+                    personaId = personaId,
+                    payload = mapOf("memoryId" to memory.id)
+                )
+            }
+
+        // B) Recap files
+        sources.take(2).forEach { source ->
+            val label = source.displayName.ifBlank { source.domain ?: "Source" }
+            out += SuggestionCardUi(
+                id = "s-${source.id}",
+                kind = SuggestionKind.RECAP_FILE,
+                title = "Use $label",
+                subtitle = when (source.type) {
+                    "PDF" -> "${source.pageCount ?: 0} pages • Ready"
+                    "URL" -> source.domain ?: "Website"
+                    else -> "Attached source"
+                },
+                icon = when (source.type) {
+                    "PDF" -> R.drawable.ic_pdf
+                    "URL" -> R.drawable.ic_link
+                    else -> R.drawable.ic_doc
+                },
+                personaId = personaId,
+                payload = mapOf("sourceId" to source.id)
+            )
+        }
+
+        // C) Pick-up topics (preferences/knowledge)
+        memories
+            .filter { it.kind in listOf(MemoryKind.PREFERENCE, MemoryKind.KNOWLEDGE) }
+            .take(2)
+            .forEach { memory ->
+                out += SuggestionCardUi(
+                    id = "t-${memory.id}",
+                    kind = SuggestionKind.PICK_UP_TOPIC,
+                    title = "Explore: ${titleize(memory.text)}",
+                    subtitle = "Because you've shown interest",
+                    icon = R.drawable.ic_compass,
+                    personaId = personaId,
+                    payload = mapOf("memoryId" to memory.id)
+                )
+            }
+
+        return out
+    }
+
+    /**
+     * Truncate and clean text for titles
+     */
+    private fun titleize(text: String): String {
+        return text
+            .replace("\n", " ")
+            .take(38)
+            .trimEnd('.', ' ')
+    }
+}

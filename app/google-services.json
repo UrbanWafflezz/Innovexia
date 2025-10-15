@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362927003477",
+    "project_id": "innovexia-f700b",
+    "storage_bucket": "innovexia-f700b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362927003477:android:a31b4b46e343aa878dc1dc",
+        "android_client_info": {
+          "package_name": "com.example.innovexia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2kWNmcD0-wAKye79YmM65PBtc-2F2k6U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

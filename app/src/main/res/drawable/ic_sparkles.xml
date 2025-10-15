@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Sparkles/stars icon - AI/magic feel -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,1L9,9L1,12L9,15L12,23L15,15L23,12L15,9L12,1Z"/>
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M19,3L18,5L16,6L18,7L19,9L20,7L22,6L20,5L19,3Z"/>
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M19,15L18,17L16,18L18,19L19,21L20,19L22,18L20,17L19,15Z"/>
+</vector>
