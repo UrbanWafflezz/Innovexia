@@ -43,8 +43,16 @@ jobs:
           ls -lh app/google-services.json
 
       - name: Create local.properties
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          echo "GEMINI_API_KEY=dummy_key_for_build_check" > local.properties
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "ERROR: GEMINI_API_KEY secret is not set!"
+            echo "Please add the secret in GitHub repository Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          echo "GEMINI_API_KEY=$GEMINI_API_KEY" > local.properties
+          echo "✓ local.properties created with GEMINI_API_KEY"
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
