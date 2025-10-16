@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.innovexia.ui.theme.ColorTokens.InnovexiaColors
+import com.example.innovexia.ui.theme.InnovexiaColors
 
 /**
  * Dialog shown when a new app update is available
