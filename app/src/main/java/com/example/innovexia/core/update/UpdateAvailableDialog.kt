@@ -84,7 +84,7 @@ fun UpdateAvailableDialog(
                 Text(
                     text = "You're currently on version ${updateInfo.currentVersion}",
                     fontSize = 12.sp,
-                    color = InnovexiaColors.DarkTextTertiary,
+                    color = InnovexiaColors.DarkTextMuted,
                     textAlign = TextAlign.Center
                 )
 
@@ -128,7 +128,7 @@ fun UpdateAvailableDialog(
                     Text(
                         text = "Download size: %.1f MB".format(sizeMB),
                         fontSize = 12.sp,
-                        color = InnovexiaColors.DarkTextTertiary,
+                        color = InnovexiaColors.DarkTextMuted,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -191,7 +191,7 @@ fun UpdateAvailableDialog(
                         Text(
                             text = "Skip This Version",
                             fontSize = 12.sp,
-                            color = InnovexiaColors.DarkTextTertiary
+                            color = InnovexiaColors.DarkTextMuted
                         )
                     }
                 }
