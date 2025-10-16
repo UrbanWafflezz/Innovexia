@@ -30,6 +30,9 @@
     <!-- Audio recording permission for voice input -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Permission to install APKs (for in-app updates) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:name=".InnovexiaApplication"
         android:allowBackup="true"
@@ -55,6 +58,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- FileProvider for sharing APK files (for in-app updates) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

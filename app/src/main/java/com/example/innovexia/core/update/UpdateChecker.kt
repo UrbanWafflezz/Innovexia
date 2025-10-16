@@ -27,12 +27,14 @@ class UpdateChecker(private val context: Context) {
         private const val KEY_LAST_CHECKED = "last_checked_timestamp"
         private const val KEY_REMIND_LATER = "remind_later_timestamp"
         private const val KEY_DISMISSED_VERSION = "dismissed_version"
+        private const val KEY_FIRST_DETECTED = "first_detected_timestamp"
+        private const val KEY_DETECTED_VERSION = "detected_version"
 
         // Check for updates at most once per hour
         private const val CHECK_INTERVAL_MS = 60 * 60 * 1000L // 1 hour
 
-        // "Remind Later" delays check for 24 hours
-        private const val REMIND_LATER_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24 hours
+        // Force update after 7 days of first detection
+        private const val FORCE_UPDATE_AFTER_MS = 7 * 24 * 60 * 60 * 1000L // 7 days
     }
 
     /**
@@ -87,13 +89,6 @@ class UpdateChecker(private val context: Context) {
 
             Log.d(TAG, "Current version: $currentVersion, Latest version: $latestVersion")
 
-            // Check if user already dismissed this version
-            val dismissedVersion = prefs.getString(KEY_DISMISSED_VERSION, null)
-            if (dismissedVersion == latestVersion) {
-                Log.d(TAG, "User already dismissed this version")
-                return@withContext null
-            }
-
             // Find APK asset in release
             val apkAsset = release.assets.firstOrNull { it.name.endsWith(".apk") }
             val downloadUrl = apkAsset?.downloadUrl ?: release.htmlUrl
@@ -109,6 +104,19 @@ class UpdateChecker(private val context: Context) {
 
             if (updateInfo.isUpdateAvailable) {
                 Log.d(TAG, "Update available: $latestVersion")
+
+                // Track first detection time for this version
+                val detectedVersion = prefs.getString(KEY_DETECTED_VERSION, null)
+                if (detectedVersion != latestVersion) {
+                    // New version detected - reset tracking
+                    prefs.edit()
+                        .putString(KEY_DETECTED_VERSION, latestVersion)
+                        .putLong(KEY_FIRST_DETECTED, System.currentTimeMillis())
+                        .remove(KEY_REMIND_LATER)
+                        .apply()
+                    Log.d(TAG, "First time detecting version $latestVersion")
+                }
+
                 return@withContext updateInfo
             } else {
                 Log.d(TAG, "Already on latest version")
@@ -122,20 +130,26 @@ class UpdateChecker(private val context: Context) {
     }
 
     /**
-     * User clicked "Remind Later" - don't show update dialog for 24 hours
+     * Check if update should be forced (7 days have passed since first detection)
      */
-    fun setRemindLater() {
-        val remindLaterUntil = System.currentTimeMillis() + REMIND_LATER_INTERVAL_MS
-        prefs.edit().putLong(KEY_REMIND_LATER, remindLaterUntil).apply()
-        Log.d(TAG, "Remind later set for 24 hours")
+    fun shouldForceUpdate(): Boolean {
+        val firstDetected = prefs.getLong(KEY_FIRST_DETECTED, 0L)
+        if (firstDetected == 0L) return false
+
+        val now = System.currentTimeMillis()
+        val daysPassed = (now - firstDetected) / (24 * 60 * 60 * 1000L)
+
+        return daysPassed >= 7
     }
 
     /**
-     * User dismissed a specific version - don't show for this version again
+     * Set remind later with custom duration in milliseconds
      */
-    fun dismissVersion(version: String) {
-        prefs.edit().putString(KEY_DISMISSED_VERSION, version).apply()
-        Log.d(TAG, "Dismissed version: $version")
+    fun setRemindLater(durationMs: Long) {
+        val remindLaterUntil = System.currentTimeMillis() + durationMs
+        prefs.edit().putLong(KEY_REMIND_LATER, remindLaterUntil).apply()
+        val hours = durationMs / (60 * 60 * 1000L)
+        Log.d(TAG, "Remind later set for $hours hours")
     }
 
     /**
