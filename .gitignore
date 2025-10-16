@@ -94,11 +94,11 @@ app/src/main/res/raw/**/*
 *.md
 !README.md
 
-# Hide gradle configuration files
-app/build.gradle.kts
-build.gradle.kts
-settings.gradle.kts
-gradle.properties
+# NOTE: Gradle files are NOT hidden so CI/CD can build the project
+# app/build.gradle.kts - needed for builds
+# build.gradle.kts - needed for builds
+# settings.gradle.kts - needed for builds
+# gradle.properties - needed for builds
 
 # Hide all shell scripts
 *.sh
