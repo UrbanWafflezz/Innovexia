@@ -281,6 +281,19 @@ class FirebaseUsageTracker(
         }
     }
 
+    /**
+     * Reset usage tracker on auth state change (login/logout)
+     * Clears local DataStore to ensure fresh state for the new auth context
+     * Call this when user logs in or logs out to prevent stale data from affecting new session
+     */
+    suspend fun resetOnAuthChange() {
+        // Clear local DataStore to remove any stale data
+        context.usageDataStore.edit { prefs ->
+            prefs.clear()
+        }
+        Log.d("FirebaseUsageTracker", "Usage tracker reset on auth state change")
+    }
+
     // ========== PRIVATE HELPERS ==========
 
     /**

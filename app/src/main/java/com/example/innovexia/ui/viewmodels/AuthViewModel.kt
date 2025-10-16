@@ -67,6 +67,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             SessionRecorder.upsertCurrentSession(getApplication())
             // Notify profile repository of auth change
             repository.getProfileRepository()?.onAuthChanged()
+
+            // Re-seed Inno persona for new user
+            seedInnoPersonaForCurrentUser()
+
             // Check for guest chats to merge
             checkForGuestChats()
         } else {
@@ -82,6 +86,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             SessionRecorder.upsertCurrentSession(getApplication())
             // Notify profile repository of auth change
             repository.getProfileRepository()?.onAuthChanged()
+
+            // Re-seed Inno persona for new user
+            seedInnoPersonaForCurrentUser()
+
             // Check for guest chats to merge
             checkForGuestChats()
         } else {
@@ -99,6 +107,33 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun signOut() = viewModelScope.launch {
+        // Get current user ID before signing out
+        val currentOwnerId = FirebaseAuthManager.currentUser()?.uid
+            ?: com.example.innovexia.core.auth.ProfileId.GUEST_OWNER_ID
+
+        android.util.Log.d("AuthViewModel", "Signing out user: $currentOwnerId")
+
+        // Clear persona and memory state for current user
+        try {
+            val app = getApplication() as InnovexiaApplication
+
+            // Clear active persona selection
+            val personaPrefs = com.example.innovexia.core.persona.PersonaPreferences(getApplication())
+            personaPrefs.clearForOwner(currentOwnerId)
+            android.util.Log.d("AuthViewModel", "Cleared persona preferences for $currentOwnerId")
+
+            // Clear memory preferences
+            val memoryEngine = com.example.innovexia.memory.Mind.di.MindModule.provideMemoryEngine(getApplication())
+            if (memoryEngine is com.example.innovexia.memory.Mind.MemoryEngineImpl) {
+                memoryEngine.clearAllPreferencesForOwner(currentOwnerId)
+                android.util.Log.d("AuthViewModel", "Cleared memory preferences for $currentOwnerId")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AuthViewModel", "Error clearing user data on logout", e)
+            // Continue with logout even if clearing fails
+        }
+
+        // Sign out from Firebase
         FirebaseAuthManager.signOut()
         _signedIn.value = false
 
@@ -110,6 +145,30 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
         // Notify profile repository of auth change
         repository.getProfileRepository()?.onAuthChanged()
+
+        android.util.Log.d("AuthViewModel", "Sign out completed")
+    }
+
+    /**
+     * Seed Inno persona for the currently signed-in user.
+     * This ensures Inno is created immediately after login/signup.
+     */
+    private fun seedInnoPersonaForCurrentUser() = viewModelScope.launch {
+        try {
+            val app = getApplication() as InnovexiaApplication
+            val ownerId = FirebaseAuthManager.currentUser()?.uid
+                ?: com.example.innovexia.core.auth.ProfileId.GUEST_OWNER_ID
+
+            android.util.Log.d("AuthViewModel", "Seeding Inno persona for owner: $ownerId")
+
+            // Ensure Inno exists and is set as default
+            app.personaRepository.ensureInnoIsDefault(ownerId)
+
+            android.util.Log.d("AuthViewModel", "Inno persona seeded successfully for owner: $ownerId")
+        } catch (e: Exception) {
+            android.util.Log.e("AuthViewModel", "Failed to seed Inno persona on login", e)
+            // Don't fail login if Inno creation fails
+        }
     }
 
     /**

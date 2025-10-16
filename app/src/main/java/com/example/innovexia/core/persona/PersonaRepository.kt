@@ -169,21 +169,24 @@ class PersonaRepository(
      * @return The Inno persona (domain model)
      */
     suspend fun getOrCreateInnoPersona(ownerId: String): Persona {
+        // Get per-user Inno ID
+        val innoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
+
         // Check if Inno already exists for this owner
-        val existing = personaDao.getById(InnoPersonaDefaults.INNO_PERSONA_ID)
+        val existing = personaDao.getById(innoId)
 
         if (existing != null && existing.ownerId == ownerId) {
-            android.util.Log.d("PersonaRepository", "Inno persona already exists for owner $ownerId")
+            android.util.Log.d("PersonaRepository", "Inno persona already exists for owner $ownerId (ID: $innoId)")
             return existing.toDomainModel()
         }
 
-        // Create Inno persona
+        // Create Inno persona with per-user ID
         val now = System.currentTimeMillis()
         val innoEntity = InnoPersonaDefaults.createInnoPersonaEntity(ownerId, now)
 
         // Insert to local database
         personaDao.upsert(innoEntity)
-        android.util.Log.d("PersonaRepository", "Created Inno persona for owner $ownerId")
+        android.util.Log.d("PersonaRepository", "Created Inno persona for owner $ownerId (ID: $innoId)")
 
         // Trigger cloud sync in background for signed-in users (best effort)
         // Cloud sync will handle this in the next sync cycle
@@ -198,7 +201,8 @@ class PersonaRepository(
      * @return true if Inno exists, false otherwise
      */
     suspend fun hasInnoPersona(ownerId: String): Boolean {
-        val inno = personaDao.getById(InnoPersonaDefaults.INNO_PERSONA_ID)
+        val innoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
+        val inno = personaDao.getById(innoId)
         return inno != null && inno.ownerId == ownerId
     }
 
@@ -212,13 +216,14 @@ class PersonaRepository(
     suspend fun ensureInnoIsDefault(ownerId: String): Persona {
         // Get or create Inno
         val inno = getOrCreateInnoPersona(ownerId)
+        val innoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
 
         // Check if Inno is already default
         val defaultPersona = getDefaultPersona(ownerId)
-        if (defaultPersona?.id != InnoPersonaDefaults.INNO_PERSONA_ID) {
+        if (defaultPersona?.id != innoId) {
             // Set Inno as default
-            setDefaultPersona(ownerId, InnoPersonaDefaults.INNO_PERSONA_ID)
-            android.util.Log.d("PersonaRepository", "Set Inno as default persona for owner $ownerId")
+            setDefaultPersona(ownerId, innoId)
+            android.util.Log.d("PersonaRepository", "Set Inno as default persona for owner $ownerId (ID: $innoId)")
         }
 
         return inno
@@ -231,7 +236,8 @@ class PersonaRepository(
      * @return Inno persona or null
      */
     suspend fun getInnoPersona(ownerId: String): Persona? {
-        val inno = personaDao.getById(InnoPersonaDefaults.INNO_PERSONA_ID)
+        val innoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
+        val inno = personaDao.getById(innoId)
         return if (inno != null && inno.ownerId == ownerId) {
             inno.toDomainModel()
         } else {

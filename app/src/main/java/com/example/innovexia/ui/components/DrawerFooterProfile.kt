@@ -136,64 +136,66 @@ fun DrawerFooterProfile(
             }
         }
 
-        // Rate Limit card
-        Surface(
-            color = InnovexiaColors.DarkSurfaceElevated.copy(alpha = 0.4f),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, InnovexiaColors.DarkBorder.copy(alpha = 0.3f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        // Rate Limit card - only show for guest users
+        if (isGuest) {
+            Surface(
+                color = InnovexiaColors.DarkSurfaceElevated.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, InnovexiaColors.DarkBorder.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
+                    modifier = Modifier.padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Icon
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(InnovexiaColors.BlueAccent.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Speed,
-                            contentDescription = "Rate Limit",
-                            tint = InnovexiaColors.BlueAccent,
-                            modifier = Modifier.size(14.dp)
+                        // Icon
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(InnovexiaColors.BlueAccent.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Speed,
+                                contentDescription = "Rate Limit",
+                                tint = InnovexiaColors.BlueAccent,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "Rate Limit",
+                            color = InnovexiaColors.DarkTextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
 
-                    Text(
-                        text = "Rate Limit",
-                        color = InnovexiaColors.DarkTextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = "$burstCount / ${planLimits.burstRequestsPerMinute} requests",
-                        color = if (burstCount >= planLimits.burstRequestsPerMinute * 0.9f) {
-                            InnovexiaColors.ErrorRed
-                        } else {
-                            InnovexiaColors.DarkTextPrimary
-                        },
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "per minute",
-                        color = InnovexiaColors.DarkTextSecondary,
-                        fontSize = 10.sp
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "$burstCount / ${planLimits.burstRequestsPerMinute} requests",
+                            color = if (burstCount >= planLimits.burstRequestsPerMinute * 0.9f) {
+                                InnovexiaColors.ErrorRed
+                            } else {
+                                InnovexiaColors.DarkTextPrimary
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "per minute",
+                            color = InnovexiaColors.DarkTextSecondary,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
         }

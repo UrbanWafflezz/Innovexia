@@ -368,6 +368,17 @@ fun HomeScreen(
         }
     }
 
+    // Reset usage tracker on auth state change (separate effect to track previous state)
+    var previousSignedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(signedIn) {
+        // Only reset if auth state actually changed (not on first load)
+        if (previousSignedIn != null && previousSignedIn != signedIn) {
+            android.util.Log.d("HomeScreen", "Auth state changed from $previousSignedIn to $signedIn - resetting usage tracker")
+            usageTracker.resetOnAuthChange()
+        }
+        previousSignedIn = signedIn
+    }
+
     // Clear focus when drawer closes
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {

@@ -108,6 +108,26 @@ class MemoryEngineImpl(
     }
 
     /**
+     * Clear all memory preferences for a specific owner/user.
+     * Used when signing out to reset memory state.
+     * Note: This clears memory enable/disable preferences, not the actual memories.
+     */
+    suspend fun clearAllPreferencesForOwner(ownerId: String) {
+        // Memory preferences are keyed by personaId, so we need to clear all memory-related keys
+        // This is a broad clear - removes all memory enable/disable flags
+        // The actual memory data in the database should be cleared separately if needed
+        context.memoryPrefsDataStore.edit { prefs ->
+            // Get all keys that contain memory_enabled prefix
+            val keysToRemove = prefs.asMap().keys.filter {
+                it.name.startsWith("memory_enabled_")
+            }
+            keysToRemove.forEach { key ->
+                prefs.remove(key)
+            }
+        }
+    }
+
+    /**
      * Convert entity to API model
      */
     private fun com.example.innovexia.memory.Mind.store.entities.MemoryEntity.toMemory() = Memory(

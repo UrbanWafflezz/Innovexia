@@ -11,8 +11,27 @@ import com.example.innovexia.data.local.entities.PersonaEntity
  */
 object InnoPersonaDefaults {
 
-    // Fixed UUID for Inno across all users (for consistency and future updates)
+    // Base ID for Inno persona (per-user to avoid conflicts)
+    private const val INNO_PERSONA_BASE_ID = "inno-default-persona"
+
+    /**
+     * Get the Inno persona ID for a specific owner.
+     * Each user/guest gets their own Inno persona to prevent conflicts.
+     *
+     * @param ownerId The owner ID (guest or Firebase UID)
+     * @return The Inno persona ID for this owner
+     */
+    fun getInnoPersonaId(ownerId: String): String {
+        return "$INNO_PERSONA_BASE_ID-$ownerId"
+    }
+
+    /**
+     * Legacy constant for backward compatibility.
+     * @deprecated Use getInnoPersonaId(ownerId) instead
+     */
+    @Deprecated("Use getInnoPersonaId(ownerId) for per-user Inno personas", ReplaceWith("getInnoPersonaId(ownerId)"))
     const val INNO_PERSONA_ID = "inno-default-persona-v1"
+
     const val INNO_NAME = "Inno"
     const val INNO_INITIAL = "I"
     const val INNO_COLOR = 0xFF3B82F6L // Innovexia brand blue
@@ -311,7 +330,7 @@ Remember: You are Inno - helpful, knowledgeable, personalized, and always learni
      */
     fun createInnoPersonaEntity(ownerId: String, now: Long = System.currentTimeMillis()): PersonaEntity {
         return PersonaEntity(
-            id = INNO_PERSONA_ID,
+            id = getInnoPersonaId(ownerId), // Per-user Inno ID
             ownerId = ownerId,
             name = INNO_NAME,
             initial = INNO_INITIAL,

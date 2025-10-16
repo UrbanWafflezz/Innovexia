@@ -23,8 +23,8 @@ class PersonaPreferences(
     fun getActivePersonaId(ownerId: String): Flow<String?> {
         val key = stringPreferencesKey("active_persona_${ownerId}")
         return context.personaDataStore.data.map { prefs ->
-            // Return stored persona ID, or default to Inno if not set
-            prefs[key] ?: InnoPersonaDefaults.INNO_PERSONA_ID
+            // Return stored persona ID, or default to per-user Inno if not set
+            prefs[key] ?: InnoPersonaDefaults.getInnoPersonaId(ownerId)
         }
     }
 
@@ -59,7 +59,28 @@ class PersonaPreferences(
      */
     fun isInnoActive(ownerId: String): Flow<Boolean> {
         return getActivePersonaId(ownerId).map { activeId ->
-            activeId == InnoPersonaDefaults.INNO_PERSONA_ID
+            activeId == InnoPersonaDefaults.getInnoPersonaId(ownerId)
+        }
+    }
+
+    /**
+     * Clear the active persona selection for a specific user/guest.
+     * Used when signing out to reset persona state.
+     */
+    suspend fun clearForOwner(ownerId: String) {
+        val key = stringPreferencesKey("active_persona_${ownerId}")
+        context.personaDataStore.edit { prefs ->
+            prefs.remove(key)
+        }
+    }
+
+    /**
+     * Clear all persona preferences (for complete reset).
+     * WARNING: This clears preferences for ALL users.
+     */
+    suspend fun clearAll() {
+        context.personaDataStore.edit { prefs ->
+            prefs.clear()
         }
     }
 }
