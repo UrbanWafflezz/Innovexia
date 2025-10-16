@@ -70,10 +70,19 @@ jobs:
           VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: List built APKs (debug)
+        run: |
+          echo "=== Listing all APK files ==="
+          find app/build/outputs/apk -name "*.apk" -ls
+          echo "=== Release APK directory ==="
+          ls -lah app/build/outputs/apk/release/ || echo "Release directory not found"
+
       - name: Rename APK
         run: |
           mkdir -p release-apks
-          find app/build/outputs/apk/release -name "*.apk" -exec cp {} release-apks/Innovexia-${{ steps.version.outputs.version }}.apk \;
+          # Only copy the release APK, not debug
+          cp app/build/outputs/apk/release/Innovexia-v${{ steps.version.outputs.version }}-release.apk release-apks/Innovexia-${{ steps.version.outputs.version }}.apk || \
+          find app/build/outputs/apk/release -name "*-release.apk" -not -name "*-debug*" -exec cp {} release-apks/Innovexia-${{ steps.version.outputs.version }}.apk \;
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
