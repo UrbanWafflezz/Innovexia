@@ -40,12 +40,12 @@ class DrawerAccountViewModel(application: Application) : AndroidViewModel(applic
             val mockPlan = entitlement.planId()
             val mockStatus = entitlement.subscriptionStatus()
 
-            // Map mock plan to old SubscriptionPlan
+            // Map mock plan to unified SubscriptionPlan
             val oldPlan = when (mockPlan) {
                 PlanId.FREE -> SubscriptionPlan.FREE
-                PlanId.PLUS -> SubscriptionPlan.CORE // Map Plus to Core
+                PlanId.PLUS -> SubscriptionPlan.PLUS
                 PlanId.PRO -> SubscriptionPlan.PRO
-                PlanId.MASTER -> SubscriptionPlan.TEAM // Map Master to Team
+                PlanId.MASTER -> SubscriptionPlan.MASTER
             }
 
             // Map mock status to old SubscriptionStatus

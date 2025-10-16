@@ -206,6 +206,7 @@ class InnovexiaApplication : Application() {
     /**
      * Seed Inno default persona for all users on first launch.
      * This runs in the background and creates Inno if it doesn't exist.
+     * Also deduplicates any existing Inno personas to prevent duplicates.
      */
     private fun seedInnoPersona() {
         // Run in background thread to avoid blocking app startup
@@ -214,6 +215,9 @@ class InnovexiaApplication : Application() {
                 // Get current owner ID (guest or Firebase UID)
                 val ownerId = FirebaseAuth.getInstance().currentUser?.uid
                     ?: com.example.innovexia.core.auth.ProfileId.GUEST_OWNER_ID
+
+                // IMPORTANT: Deduplicate any existing Inno personas before checking
+                personaRepository.deduplicateInnoPersonas(ownerId)
 
                 // Check if Inno already exists
                 val hasInno = personaRepository.hasInnoPersona(ownerId)

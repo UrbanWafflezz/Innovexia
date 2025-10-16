@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
  */
 enum class ProfileTab(val title: String) {
     Profile("Profile"),
-    Billing("Billing"),
+    Usage("Usage"),
     Security("Security"),
     CloudSync("Cloud Sync")
 }

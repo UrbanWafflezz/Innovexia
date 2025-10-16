@@ -171,7 +171,16 @@ fun HomeScreen(
     val firestore = remember { com.google.firebase.firestore.FirebaseFirestore.getInstance() }
     val firebaseAuth = remember { com.google.firebase.auth.FirebaseAuth.getInstance() }
     val usageTracker = remember { FirebaseUsageTracker(context, firestore, firebaseAuth) }
-    val usageVM = remember { UsageVM(usageTracker, entitlementsVM) }
+
+    // Usage Data Repository - Aggregates real usage counts from local databases
+    val currentUserId = firebaseAuth.currentUser?.uid ?: "guest"
+    val usageDataRepository = remember(currentUserId) {
+        UsageDataRepository(context, currentUserId)
+    }
+
+    val usageVM = remember(usageTracker, entitlementsVM, usageDataRepository) {
+        UsageVM(usageTracker, entitlementsVM, usageDataRepository)
+    }
 
     // State management
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)

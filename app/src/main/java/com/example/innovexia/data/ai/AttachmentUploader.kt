@@ -4,6 +4,8 @@ import android.net.Uri
 import com.example.innovexia.data.models.AttachmentKind
 import com.example.innovexia.data.models.AttachmentMeta
 import com.example.innovexia.data.models.AttachmentStatus
+import com.example.innovexia.data.models.SubscriptionGate
+import com.example.innovexia.data.models.SubscriptionPlan
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -25,11 +27,13 @@ class AttachmentUploader(
      *
      * @param attachment The attachment to upload
      * @param chatId The chat ID this attachment belongs to
+     * @param subscriptionPlan User's subscription plan for upload size limits
      * @return Updated AttachmentMeta with Firebase URL
      */
     suspend fun uploadToFirebase(
         attachment: AttachmentMeta,
-        chatId: String
+        chatId: String,
+        subscriptionPlan: SubscriptionPlan = SubscriptionPlan.FREE
     ): AttachmentMeta {
         val userId = auth.currentUser?.uid
             ?: throw IllegalStateException("User not authenticated")
@@ -37,6 +41,21 @@ class AttachmentUploader(
         // Skip if incognito or local-only
         if (attachment.localOnly) {
             return attachment
+        }
+
+        // Check file size against subscription limit
+        if (!SubscriptionGate.canUploadFile(subscriptionPlan, attachment.sizeBytes)) {
+            val maxMB = SubscriptionGate.getMaxUploadMB(subscriptionPlan)
+            val actualMB = attachment.sizeBytes / (1024.0 * 1024.0)
+            val requiredPlan = when {
+                maxMB < 50 -> SubscriptionPlan.PLUS
+                maxMB < 100 -> SubscriptionPlan.PRO
+                else -> SubscriptionPlan.MASTER
+            }
+            throw IllegalArgumentException(
+                "File size (${String.format("%.1f", actualMB)}MB) exceeds your ${subscriptionPlan.name} plan limit of ${maxMB}MB. " +
+                SubscriptionGate.upgradeMessage("Larger uploads", requiredPlan)
+            )
         }
 
         // Get file extension

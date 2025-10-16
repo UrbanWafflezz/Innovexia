@@ -183,8 +183,8 @@ data class UsageSnapshot(
                 attachmentsBytes = 0L,
                 minuteCount = 0,
                 burstLimit = limits.burstRequestsPerMinute,
-                monthlyLimit = limits.monthlyTokens,
-                dailyLimit = limits.dailyTokens,
+                monthlyLimit = limits.tokensPerWindow,
+                dailyLimit = limits.tokensPerWindow / 30, // Rough daily approximation from monthly window
                 periodEnd = oneMonthLater
             )
         }

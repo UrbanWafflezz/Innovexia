@@ -6,6 +6,8 @@ import com.example.innovexia.data.local.AppDatabase
 import com.example.innovexia.core.persona.Persona
 import com.example.innovexia.data.models.AttachmentKind
 import com.example.innovexia.data.models.AttachmentMeta
+import com.example.innovexia.data.models.SubscriptionGate
+import com.example.innovexia.data.models.SubscriptionPlan
 import com.example.innovexia.data.preferences.UserPreferences
 import com.example.innovexia.memory.Mind.api.MemoryEngine
 import com.example.innovexia.memory.Mind.sources.api.SourcesEngine
@@ -103,6 +105,38 @@ class GeminiService(
      */
     fun isApiKeyConfigured(): Boolean {
         return BuildConfig.GEMINI_API_KEY.isNotBlank()
+    }
+
+    /**
+     * Check if user has access to the specified model based on their subscription
+     * @param modelId The model ID to check
+     * @param plan The user's subscription plan
+     * @return Pair<Boolean, String> - (hasAccess, errorMessage)
+     */
+    fun checkModelAccess(modelId: String, plan: SubscriptionPlan): Pair<Boolean, String> {
+        val hasAccess = SubscriptionGate.hasModelAccess(plan, modelId)
+
+        if (!hasAccess) {
+            // Determine minimum required plan
+            val requiredPlan = when {
+                modelId.contains("gpt-5", ignoreCase = true) ||
+                modelId.contains("claude", ignoreCase = true) ||
+                modelId.contains("perplexity", ignoreCase = true) -> {
+                    if (modelId.contains("perplexity-pro", ignoreCase = true)) {
+                        SubscriptionPlan.MASTER
+                    } else {
+                        SubscriptionPlan.PRO
+                    }
+                }
+                modelId.contains("pro", ignoreCase = true) -> SubscriptionPlan.PLUS
+                else -> SubscriptionPlan.FREE
+            }
+
+            val message = SubscriptionGate.upgradeMessage(modelId, requiredPlan)
+            return Pair(false, message)
+        }
+
+        return Pair(true, "")
     }
 
     /**

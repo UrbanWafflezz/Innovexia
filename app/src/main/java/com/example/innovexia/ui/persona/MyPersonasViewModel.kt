@@ -44,6 +44,12 @@ class MyPersonasViewModel(
     val error = _error.asSharedFlow()
 
     fun start() {
+        // IMPORTANT: First deduplicate any Inno personas before loading
+        viewModelScope.launch {
+            android.util.Log.d("MyPersonasViewModel", "Deduplicating Inno personas for ownerId=$ownerId")
+            repo.deduplicateInnoPersonas(ownerId)
+        }
+
         // Observe personas for current owner (guest or signed-in)
         viewModelScope.launch {
             repo.observeMyPersonasEntities(ownerId).collect { entities ->

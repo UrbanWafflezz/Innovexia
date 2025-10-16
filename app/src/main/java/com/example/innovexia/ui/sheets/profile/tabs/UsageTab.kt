@@ -107,7 +107,7 @@ fun UsageTab(
         UsageDonutCard(
             usagePercent = usagePercent,
             tokensUsed = currentUsage?.totalTokens ?: 0L,
-            tokensLimit = planLimits.monthlyTokens,
+            tokensLimit = planLimits.tokensPerWindow,
             periodId = currentUsage?.periodId ?: "",
             surface = surface,
             textPrimary = textPrimary,
@@ -117,7 +117,7 @@ fun UsageTab(
         // Today's usage
         TodayUsageCard(
             todayUsage = todayUsage,
-            dailyLimit = planLimits.dailyTokens,
+            dailyLimit = planLimits.tokensPerWindow / 30,
             surface = surface,
             textPrimary = textPrimary,
             textSecondary = textSecondary
@@ -411,9 +411,9 @@ private fun UsageDetailsCard(
             DetailRow("Total requests", "${currentUsage?.requests ?: 0}", textPrimary, textSecondary)
             DetailRow("Attachments", formatBytes(currentUsage?.attachmentsBytes ?: 0L), textPrimary, textSecondary)
             Divider(color = Color.Gray.copy(alpha = 0.3f))
-            DetailRow("Daily limit", formatNumber(planLimits.dailyTokens), textPrimary, textSecondary)
+            DetailRow("Window limit", formatNumber(planLimits.tokensPerWindow) + " tokens/${planLimits.windowDurationHours}hr", textPrimary, textSecondary)
             DetailRow("Burst limit", "${planLimits.burstRequestsPerMinute} req/min", textPrimary, textSecondary)
-            DetailRow("Max attachment", "${planLimits.maxAttachmentSizeMB} MB", textPrimary, textSecondary)
+            DetailRow("Max upload", "${planLimits.maxUploadMB} MB", textPrimary, textSecondary)
         }
     }
 }
@@ -451,7 +451,7 @@ private fun UpgradePrompt(
                 color = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary
             )
 
-            if (plan != SubscriptionPlan.TEAM) {
+            if (plan != SubscriptionPlan.MASTER) {
                 GlassButton(
                     text = "Upgrade Now",
                     onClick = onUpgrade,

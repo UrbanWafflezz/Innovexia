@@ -45,4 +45,10 @@ interface SourceDao {
 
     @Query("SELECT COUNT(*) FROM sources WHERE personaId = :personaId")
     suspend fun getCount(personaId: String): Int
+
+    @Query("SELECT COUNT(*) FROM sources")
+    suspend fun getTotalCount(): Int
+
+    @Query("SELECT COUNT(*) FROM sources")
+    fun observeTotalCount(): Flow<Int>
 }

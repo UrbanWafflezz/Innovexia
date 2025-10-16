@@ -50,7 +50,6 @@ import com.example.innovexia.InnovexiaApplication
 import com.example.innovexia.ui.auth.AuthPanel
 import com.example.innovexia.ui.sheets.profile.ProfileTab
 import com.example.innovexia.ui.sheets.profile.ProfileViewModel
-import com.example.innovexia.ui.sheets.profile.tabs.BillingTab
 import com.example.innovexia.ui.sheets.profile.tabs.CloudSyncTab
 import com.example.innovexia.ui.sheets.profile.tabs.ProfileTab as ProfileTabContent
 import com.example.innovexia.ui.sheets.profile.tabs.SecurityTab
@@ -201,22 +200,17 @@ fun ProfileDialog(
                                 darkTheme = darkTheme,
                                 viewModel = profileViewModel
                             )
-                            ProfileTab.Billing -> BillingTab(
-                                subscription = subscription,
-                                onSelectPlan = { plan ->
-                                    subscriptionViewModel.upgradeToPlan(plan) { checkoutUrl ->
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl))
-                                        context.startActivity(intent)
-                                    }
-                                },
-                                onManageBilling = {
-                                    subscriptionViewModel.openBillingPortal { portalUrl ->
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(portalUrl))
-                                        context.startActivity(intent)
-                                    }
-                                },
-                                onCancelSubscription = {
-                                    Toast.makeText(context, "Cancel subscription feature coming soon", Toast.LENGTH_SHORT).show()
+                            ProfileTab.Usage -> UsageTab(
+                                currentUsage = currentUsage,
+                                todayUsage = todayUsage,
+                                plan = subscription.plan,
+                                planLimits = planLimits,
+                                usagePercent = usagePercent,
+                                burstCount = burstCount,
+                                onRefresh = { subscriptionViewModel.refresh() },
+                                onUpgrade = {
+                                    // Navigate to subscriptions page
+                                    Toast.makeText(context, "Navigate to subscriptions page", Toast.LENGTH_SHORT).show()
                                 },
                                 darkTheme = darkTheme
                             )
@@ -274,7 +268,7 @@ private fun ProfileTabs(
 ) {
     val tabs = listOf(
         ProfileTab.Profile,
-        ProfileTab.Billing,
+        ProfileTab.Usage,
         ProfileTab.Security,
         ProfileTab.CloudSync
     )

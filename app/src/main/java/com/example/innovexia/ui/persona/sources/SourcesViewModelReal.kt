@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.innovexia.data.models.SubscriptionGate
+import com.example.innovexia.data.models.SubscriptionPlan
 import com.example.innovexia.memory.Mind.di.MindModule
 import com.example.innovexia.memory.Mind.sources.api.SourcesEngine
 import com.example.innovexia.memory.Mind.sources.store.entities.SourceEntity
@@ -15,7 +17,8 @@ import kotlinx.coroutines.launch
  */
 class SourcesViewModelReal(
     private val context: Context,
-    private val personaId: String
+    private val personaId: String,
+    private val subscriptionPlan: SubscriptionPlan = SubscriptionPlan.FREE
 ) : ViewModel() {
 
     private val sourcesEngine: SourcesEngine = MindModule.provideSourcesEngine(context)
@@ -48,6 +51,23 @@ class SourcesViewModelReal(
      */
     fun addPdfFromUri(uri: Uri, onResult: (Result<String>) -> Unit) {
         viewModelScope.launch {
+            // Check source count limit
+            val currentCount = sources.value.size
+            if (!SubscriptionGate.canAddSource(subscriptionPlan, currentCount)) {
+                val maxSources = SubscriptionGate.getMaxSources(subscriptionPlan)
+                val requiredPlan = when {
+                    maxSources < 50 -> SubscriptionPlan.PLUS
+                    maxSources < 250 -> SubscriptionPlan.PRO
+                    else -> SubscriptionPlan.MASTER
+                }
+                val message = SubscriptionGate.upgradeMessage(
+                    "More than $maxSources sources",
+                    requiredPlan
+                )
+                onResult(Result.failure(Exception(message)))
+                return@launch
+            }
+
             val result = sourcesEngine.addPdfFromUri(personaId, uri)
             onResult(result)
         }
@@ -59,6 +79,23 @@ class SourcesViewModelReal(
     fun addUrl(url: String, onResult: (Result<String>) -> Unit) {
         android.util.Log.d("SourcesViewModelReal", "addUrl called - personaId: $personaId, url: $url")
         viewModelScope.launch {
+            // Check source count limit
+            val currentCount = sources.value.size
+            if (!SubscriptionGate.canAddSource(subscriptionPlan, currentCount)) {
+                val maxSources = SubscriptionGate.getMaxSources(subscriptionPlan)
+                val requiredPlan = when {
+                    maxSources < 50 -> SubscriptionPlan.PLUS
+                    maxSources < 250 -> SubscriptionPlan.PRO
+                    else -> SubscriptionPlan.MASTER
+                }
+                val message = SubscriptionGate.upgradeMessage(
+                    "More than $maxSources sources",
+                    requiredPlan
+                )
+                onResult(Result.failure(Exception(message)))
+                return@launch
+            }
+
             val result = sourcesEngine.addUrlSource(
                 personaId = personaId,
                 url = url,
@@ -75,6 +112,23 @@ class SourcesViewModelReal(
      */
     fun addFileFromUri(uri: Uri, onResult: (Result<String>) -> Unit) {
         viewModelScope.launch {
+            // Check source count limit
+            val currentCount = sources.value.size
+            if (!SubscriptionGate.canAddSource(subscriptionPlan, currentCount)) {
+                val maxSources = SubscriptionGate.getMaxSources(subscriptionPlan)
+                val requiredPlan = when {
+                    maxSources < 50 -> SubscriptionPlan.PLUS
+                    maxSources < 250 -> SubscriptionPlan.PRO
+                    else -> SubscriptionPlan.MASTER
+                }
+                val message = SubscriptionGate.upgradeMessage(
+                    "More than $maxSources sources",
+                    requiredPlan
+                )
+                onResult(Result.failure(Exception(message)))
+                return@launch
+            }
+
             val result = sourcesEngine.addFileFromUri(personaId, uri)
             onResult(result)
         }

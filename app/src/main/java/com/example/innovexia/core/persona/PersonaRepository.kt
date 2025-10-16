@@ -10,6 +10,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
@@ -161,14 +163,18 @@ class PersonaRepository(
     // Inno Default Persona (System-Managed)
     // ═════════════════════════════════════════════════════════════════════════════
 
+    // Mutex to prevent race conditions when creating Inno personas
+    private val innoCreationMutex = Mutex()
+
     /**
      * Get or create Inno persona for a specific owner.
      * Inno is the default AI companion that's automatically created for all users.
+     * Uses a mutex to prevent race conditions that could create duplicates.
      *
      * @param ownerId The owner ID (guest or Firebase UID)
      * @return The Inno persona (domain model)
      */
-    suspend fun getOrCreateInnoPersona(ownerId: String): Persona {
+    suspend fun getOrCreateInnoPersona(ownerId: String): Persona = innoCreationMutex.withLock {
         // Get per-user Inno ID
         val innoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
 
@@ -209,14 +215,32 @@ class PersonaRepository(
     /**
      * Ensure Inno is the default persona for the given owner.
      * Creates Inno if it doesn't exist, and sets it as default.
+     * Uses the same mutex as getOrCreateInnoPersona to prevent race conditions.
      *
      * @param ownerId The owner ID
      * @return The Inno persona
      */
-    suspend fun ensureInnoIsDefault(ownerId: String): Persona {
-        // Get or create Inno
-        val inno = getOrCreateInnoPersona(ownerId)
+    suspend fun ensureInnoIsDefault(ownerId: String): Persona = innoCreationMutex.withLock {
+        // Get per-user Inno ID
         val innoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
+
+        // Check if Inno already exists for this owner
+        val existing = personaDao.getById(innoId)
+
+        val inno = if (existing != null && existing.ownerId == ownerId) {
+            android.util.Log.d("PersonaRepository", "Inno persona already exists for owner $ownerId (ID: $innoId)")
+            existing.toDomainModel()
+        } else {
+            // Create Inno persona with per-user ID
+            val now = System.currentTimeMillis()
+            val innoEntity = InnoPersonaDefaults.createInnoPersonaEntity(ownerId, now)
+
+            // Insert to local database
+            personaDao.upsert(innoEntity)
+            android.util.Log.d("PersonaRepository", "Created Inno persona for owner $ownerId (ID: $innoId)")
+
+            innoEntity.toDomainModel()
+        }
 
         // Check if Inno is already default
         val defaultPersona = getDefaultPersona(ownerId)
@@ -242,6 +266,59 @@ class PersonaRepository(
             inno.toDomainModel()
         } else {
             null
+        }
+    }
+
+    /**
+     * Deduplicate Inno personas for the given owner.
+     * This fixes the issue where multiple Inno personas are created for the same owner.
+     * Keeps the most recently updated Inno and deletes all others.
+     *
+     * @param ownerId The owner ID to deduplicate for
+     */
+    suspend fun deduplicateInnoPersonas(ownerId: String) {
+        try {
+            // Get all personas for this owner with name "Inno"
+            val allPersonas = personaDao.getForOwner(ownerId)
+            val innoPersonas = allPersonas.filter { it.name == InnoPersonaDefaults.INNO_NAME }
+
+            if (innoPersonas.size <= 1) {
+                // No duplicates, nothing to do
+                return
+            }
+
+            android.util.Log.w("PersonaRepository", "Found ${innoPersonas.size} Inno personas for owner $ownerId - deduplicating...")
+
+            // Keep the correct one (with proper ID format) OR the most recently updated one
+            val correctInnoId = InnoPersonaDefaults.getInnoPersonaId(ownerId)
+            val correctInno = innoPersonas.find { it.id == correctInnoId }
+
+            val keepInno = if (correctInno != null) {
+                android.util.Log.d("PersonaRepository", "Keeping Inno with correct ID: ${correctInno.id}")
+                correctInno
+            } else {
+                // None have the correct ID, keep the most recently updated one
+                val mostRecent = innoPersonas.maxByOrNull { it.updatedAt }!!
+                android.util.Log.d("PersonaRepository", "Keeping most recent Inno: ${mostRecent.id} (updated at ${mostRecent.updatedAt})")
+
+                // Update its ID to the correct format
+                val updatedInno = mostRecent.copy(id = correctInnoId)
+                personaDao.upsert(updatedInno)
+                updatedInno
+            }
+
+            // Delete all other Inno personas
+            innoPersonas.forEach { inno ->
+                if (inno.id != keepInno.id) {
+                    android.util.Log.d("PersonaRepository", "Deleting duplicate Inno: ${inno.id}")
+                    personaDao.deleteById(inno.id)
+                }
+            }
+
+            android.util.Log.d("PersonaRepository", "✓ Deduplication complete - kept Inno with ID: ${keepInno.id}")
+        } catch (e: Exception) {
+            android.util.Log.e("PersonaRepository", "Failed to deduplicate Inno personas", e)
+            // Don't crash - deduplication is best-effort
         }
     }
 

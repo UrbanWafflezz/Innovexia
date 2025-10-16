@@ -22,6 +22,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 /**
@@ -155,17 +156,34 @@ class ChatViewModel(
 
     /**
      * Get the user's current subscription plan for rate limiting
+     * TODO: Inject SubscriptionRepository in constructor to avoid creating new instance
      */
     private suspend fun getCurrentSubscriptionPlan(): com.example.innovexia.data.models.SubscriptionPlan {
-        // For now, assume guests and free users are on FREE plan
-        // TODO: Integrate with actual subscription repository
         val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         return if (userId == null) {
             // Guest user - always FREE plan
             com.example.innovexia.data.models.SubscriptionPlan.FREE
         } else {
-            // Logged-in user - check their actual subscription (defaulting to FREE for now)
-            com.example.innovexia.data.models.SubscriptionPlan.FREE
+            // Logged-in user - get actual subscription from Firestore
+            try {
+                val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                val snapshot = firestore.collection("users")
+                    .document(userId)
+                    .collection("subscription")
+                    .document("current")
+                    .get()
+                    .await()
+
+                if (snapshot.exists()) {
+                    val planString = snapshot.getString("plan") ?: "free"
+                    com.example.innovexia.data.models.SubscriptionPlan.fromString(planString)
+                } else {
+                    com.example.innovexia.data.models.SubscriptionPlan.FREE
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ChatViewModel", "Failed to fetch subscription: ${e.message}")
+                com.example.innovexia.data.models.SubscriptionPlan.FREE
+            }
         }
     }
 

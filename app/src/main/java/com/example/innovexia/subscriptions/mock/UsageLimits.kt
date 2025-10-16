@@ -8,7 +8,10 @@ data class UsageLimits(
     val messagesPerWindow: Int,        // Messages allowed per 5-hour window
     val tokensPerWindow: Long,         // Token limit per 5-hour window
     val contextLength: String,         // Max context window
-    val windowDurationHours: Int = 5   // Window duration in hours
+    val windowDurationHours: Int = 5,  // Window duration in hours
+    val memoryEntryLimit: Int? = null, // Max memory entries (null = unlimited)
+    val maxSources: Int = 5,           // Max sources (files/URLs)
+    val maxUploadMB: Int = 10          // Max upload size in MB
 ) {
     companion object {
         /**
@@ -19,22 +22,34 @@ data class UsageLimits(
                 PlanId.FREE -> UsageLimits(
                     messagesPerWindow = 25,
                     tokensPerWindow = 100_000L,
-                    contextLength = "32K"
+                    contextLength = "32K",
+                    memoryEntryLimit = 50,
+                    maxSources = 5,
+                    maxUploadMB = 10
                 )
                 PlanId.PLUS -> UsageLimits(
                     messagesPerWindow = 100,
                     tokensPerWindow = 500_000L,
-                    contextLength = "128K"
+                    contextLength = "128K",
+                    memoryEntryLimit = 500,
+                    maxSources = 50,
+                    maxUploadMB = 50
                 )
                 PlanId.PRO -> UsageLimits(
                     messagesPerWindow = 250,
                     tokensPerWindow = 1_500_000L,
-                    contextLength = "256K"
+                    contextLength = "256K",
+                    memoryEntryLimit = 2500, // 2500 memory entries for PRO
+                    maxSources = 250,
+                    maxUploadMB = 100
                 )
                 PlanId.MASTER -> UsageLimits(
                     messagesPerWindow = 1000,
                     tokensPerWindow = 5_000_000L,
-                    contextLength = "512K"
+                    contextLength = "512K",
+                    memoryEntryLimit = null, // unlimited
+                    maxSources = 1000,
+                    maxUploadMB = 250
                 )
             }
         }

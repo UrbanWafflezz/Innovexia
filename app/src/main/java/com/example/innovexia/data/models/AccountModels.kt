@@ -19,9 +19,9 @@ data class TierInfo(
         fun fromSubscription(subscription: UserSubscription): TierInfo {
             val (label, color) = when (subscription.plan) {
                 SubscriptionPlan.FREE -> "Free" to Color(0xFF9CA3AF) // neutral gray
-                SubscriptionPlan.CORE -> "Core" to Color(0xFF3B82F6) // blue
+                SubscriptionPlan.PLUS -> "Plus" to Color(0xFF3B82F6) // blue
                 SubscriptionPlan.PRO -> "Pro" to Color(0xFF8B5CF6) // purple
-                SubscriptionPlan.TEAM -> "Team" to Color(0xFF14B8A6) // teal
+                SubscriptionPlan.MASTER -> "Master" to Color(0xFFF0C76A) // gold
             }
 
             val statusLabel = when (subscription.status) {

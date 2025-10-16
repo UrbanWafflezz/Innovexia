@@ -4,12 +4,13 @@ import com.google.firebase.Timestamp
 
 /**
  * Subscription plan tiers
+ * Aligned with mock system: FREE, PLUS, PRO, MASTER
  */
 enum class SubscriptionPlan {
     FREE,
-    CORE,
+    PLUS,
     PRO,
-    TEAM;
+    MASTER;
 
     companion object {
         fun fromString(value: String): SubscriptionPlan {
@@ -37,14 +38,29 @@ enum class SubscriptionStatus {
 
 /**
  * Plan limits and capabilities
+ * Unified system with mock entitlements
  */
 data class PlanLimits(
     val plan: SubscriptionPlan,
-    val monthlyTokens: Long,
-    val dailyTokens: Long,
+    // Token limits (5-hour windows)
+    val tokensPerWindow: Long,
+    val messagesPerWindow: Int,
+    val windowDurationHours: Int,
+    // Burst rate limiting (per minute)
     val burstRequestsPerMinute: Int,
-    val maxAttachmentSizeMB: Int,
+    // Model access
     val modelAccess: List<String>,
+    // Upload & storage
+    val maxUploadMB: Int,
+    val maxSources: Int,
+    val memoryEntries: Int?, // null = unlimited
+    // Context
+    val contextLength: String,
+    // Features
+    val cloudBackup: Boolean,
+    val teamSpaces: Int, // 0 = none, N = max members
+    val priorityClass: Int, // 1..4 (1=lowest, 4=highest)
+    // Pricing
     val pricePerMonth: Int // in cents
 ) {
     companion object {
@@ -52,39 +68,67 @@ data class PlanLimits(
             return when (plan) {
                 SubscriptionPlan.FREE -> PlanLimits(
                     plan = SubscriptionPlan.FREE,
-                    monthlyTokens = 1_000_000L,
-                    dailyTokens = 100_000L,
+                    tokensPerWindow = 100_000L,
+                    messagesPerWindow = 25,
+                    windowDurationHours = 5,
                     burstRequestsPerMinute = 10,
-                    maxAttachmentSizeMB = 2,
                     modelAccess = listOf("gemini-2.5-flash"),
+                    maxUploadMB = 10,
+                    maxSources = 5,
+                    memoryEntries = 50,
+                    contextLength = "32K",
+                    cloudBackup = false,
+                    teamSpaces = 0,
+                    priorityClass = 1,
                     pricePerMonth = 0
                 )
-                SubscriptionPlan.CORE -> PlanLimits(
-                    plan = SubscriptionPlan.CORE,
-                    monthlyTokens = 10_000_000L,
-                    dailyTokens = 1_500_000L,
+                SubscriptionPlan.PLUS -> PlanLimits(
+                    plan = SubscriptionPlan.PLUS,
+                    tokensPerWindow = 500_000L,
+                    messagesPerWindow = 100,
+                    windowDurationHours = 5,
                     burstRequestsPerMinute = 30,
-                    maxAttachmentSizeMB = 8,
                     modelAccess = listOf("gemini-2.5-flash", "gemini-2.5-pro"),
-                    pricePerMonth = 1800 // $18.00
+                    maxUploadMB = 50,
+                    maxSources = 50,
+                    memoryEntries = 500,
+                    contextLength = "128K",
+                    cloudBackup = true,
+                    teamSpaces = 0,
+                    priorityClass = 2,
+                    pricePerMonth = 999 // $9.99
                 )
                 SubscriptionPlan.PRO -> PlanLimits(
                     plan = SubscriptionPlan.PRO,
-                    monthlyTokens = 25_000_000L,
-                    dailyTokens = 4_000_000L,
+                    tokensPerWindow = 1_500_000L,
+                    messagesPerWindow = 250,
+                    windowDurationHours = 5,
                     burstRequestsPerMinute = 60,
-                    maxAttachmentSizeMB = 16,
-                    modelAccess = listOf("gemini-2.5-flash", "gemini-2.5-pro", "gemini-thinking", "grounding"),
-                    pricePerMonth = 2800 // $28.00
+                    modelAccess = listOf("gemini-2.5-flash", "gemini-2.5-pro", "gpt-5", "claude-4.5", "perplexity"),
+                    maxUploadMB = 100,
+                    maxSources = 250,
+                    memoryEntries = null, // unlimited
+                    contextLength = "256K",
+                    cloudBackup = true,
+                    teamSpaces = 2,
+                    priorityClass = 3,
+                    pricePerMonth = 1999 // $19.99
                 )
-                SubscriptionPlan.TEAM -> PlanLimits(
-                    plan = SubscriptionPlan.TEAM,
-                    monthlyTokens = 60_000_000L,
-                    dailyTokens = 8_000_000L,
+                SubscriptionPlan.MASTER -> PlanLimits(
+                    plan = SubscriptionPlan.MASTER,
+                    tokensPerWindow = 5_000_000L,
+                    messagesPerWindow = 1000,
+                    windowDurationHours = 5,
                     burstRequestsPerMinute = 90,
-                    maxAttachmentSizeMB = 20,
-                    modelAccess = listOf("gemini-2.5-flash", "gemini-2.5-pro", "gemini-thinking", "grounding", "sso"),
-                    pricePerMonth = 4200 // $42.00 per seat
+                    modelAccess = listOf("gemini-2.5-flash", "gemini-2.5-pro", "gpt-5", "claude-4.5", "perplexity", "perplexity-pro"),
+                    maxUploadMB = 250,
+                    maxSources = 1000,
+                    memoryEntries = null, // unlimited
+                    contextLength = "512K",
+                    cloudBackup = true,
+                    teamSpaces = 5,
+                    priorityClass = 4,
+                    pricePerMonth = 3999 // $39.99
                 )
             }
         }

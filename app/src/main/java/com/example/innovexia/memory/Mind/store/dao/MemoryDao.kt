@@ -37,6 +37,12 @@ interface MemoryDao {
     @Query("SELECT COUNT(*) FROM memories WHERE personaId = :personaId")
     suspend fun getCount(personaId: String): Int
 
+    @Query("SELECT COUNT(*) FROM memories")
+    suspend fun getTotalCount(): Int
+
+    @Query("SELECT COUNT(*) FROM memories")
+    fun observeTotalCount(): Flow<Int>
+
     @Query("UPDATE memories SET lastAccessed = :timestamp WHERE id IN (:ids)")
     suspend fun updateLastAccessed(ids: List<String>, timestamp: Long)
 

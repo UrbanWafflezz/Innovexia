@@ -57,8 +57,8 @@ class SubscriptionViewModel(
      * Usage percentage (0-100)
      */
     val usagePercent: StateFlow<Float> = combine(currentUsage, planLimits) { usage, limits ->
-        if (usage == null || limits.monthlyTokens == 0L) return@combine 0f
-        (usage.totalTokens.toFloat() / limits.monthlyTokens.toFloat() * 100f).coerceIn(0f, 100f)
+        if (usage == null || limits.tokensPerWindow == 0L) return@combine 0f
+        (usage.totalTokens.toFloat() / limits.tokensPerWindow.toFloat() * 100f).coerceIn(0f, 100f)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
 
     /**
@@ -71,7 +71,7 @@ class SubscriptionViewModel(
      * Has exceeded limit
      */
     val hasExceededLimit: StateFlow<Boolean> = combine(currentUsage, planLimits) { usage, limits ->
-        usage != null && usage.totalTokens >= limits.monthlyTokens
+        usage != null && usage.totalTokens >= limits.tokensPerWindow
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // ==================== Rate Limit State ====================
@@ -103,13 +103,21 @@ class SubscriptionViewModel(
 
         // Listen to subscription changes and reset rate limiter when auth state changes
         viewModelScope.launch {
-            var previousUserId: String? = FirebaseAuth.getInstance().currentUser?.uid
+            var previousUserId: String? = null
+            var isFirstEmission = true
 
             subscription.collect { sub ->
                 val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
+                // Skip first emission to establish baseline auth state
+                if (isFirstEmission) {
+                    previousUserId = currentUserId
+                    isFirstEmission = false
+                    android.util.Log.d("SubscriptionViewModel", "Initial auth state captured: $currentUserId")
+                    return@collect
+                }
+
                 // Detect auth state change (login or logout)
-                // Don't reset on initial collection (previousUserId will be same as currentUserId)
                 if (previousUserId != currentUserId) {
                     // Auth state changed - reset rate limiter
                     firebaseRateLimiter.resetOnAuthChange()

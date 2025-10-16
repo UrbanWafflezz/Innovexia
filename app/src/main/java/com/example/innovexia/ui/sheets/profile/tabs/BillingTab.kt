@@ -232,9 +232,9 @@ private fun PlanOptionCard(
     val limits = PlanLimits.getLimits(plan)
     val emoji = when (plan) {
         SubscriptionPlan.FREE -> "✨"
-        SubscriptionPlan.CORE -> "🚀"
+        SubscriptionPlan.PLUS -> "🚀"
         SubscriptionPlan.PRO -> "💎"
-        SubscriptionPlan.TEAM -> "⚡"
+        SubscriptionPlan.MASTER -> "⚡"
     }
 
     Box(
@@ -290,7 +290,7 @@ private fun PlanOptionCard(
                     }
 
                     Text(
-                        text = "${formatTokenCount(limits.monthlyTokens)} tokens/mo • ${limits.burstRequestsPerMinute} req/min",
+                        text = "${formatTokenCount(limits.tokensPerWindow)} tokens/${limits.windowDurationHours}hr • ${limits.burstRequestsPerMinute} req/min",
                         style = MaterialTheme.typography.bodySmall,
                         color = textSecondary
                     )

@@ -12,7 +12,8 @@ import kotlinx.coroutines.launch
  */
 class UsageVM(
     private val usageTracker: UsageTrackerInterface,
-    private val entitlementsVM: EntitlementsVM
+    private val entitlementsVM: EntitlementsVM,
+    private val usageDataRepository: UsageDataRepository? = null
 ) : ViewModel() {
 
     /**
@@ -41,31 +42,65 @@ class UsageVM(
     /**
      * Combined usage state for UI
      */
-    val usageState: StateFlow<UsageState> = combine(
-        usageWindow,
-        usageLimits,
-        entitlementsVM.entitlement
-    ) { window, limits, entitlement ->
-        UsageState(
-            window = window,
-            limits = limits,
-            plan = entitlement.planId(),
-            messagesUsed = window.messageCount,
-            messagesLimit = limits.messagesPerWindow,
-            tokensUsed = window.tokensUsed,
-            tokensLimit = limits.tokensPerWindow,
-            tokensIn = window.tokensIn,
-            tokensOut = window.tokensOut,
-            timeUntilReset = window.timeUntilReset(),
-            progressPercent = window.progressPercent(limits),
-            isLimitReached = window.isLimitReached(limits),
-            isApproachingLimit = window.isApproachingLimit(limits)
+    val usageState: StateFlow<UsageState> = if (usageDataRepository != null) {
+        // With real usage data
+        combine(
+            usageWindow,
+            usageLimits,
+            entitlementsVM.entitlement,
+            usageDataRepository.observeUsageData()
+        ) { window, limits, entitlement, usageData ->
+            UsageState(
+                window = window,
+                limits = limits,
+                plan = entitlement.planId(),
+                messagesUsed = window.messageCount,
+                messagesLimit = limits.messagesPerWindow,
+                tokensUsed = window.tokensUsed,
+                tokensLimit = limits.tokensPerWindow,
+                tokensIn = window.tokensIn,
+                tokensOut = window.tokensOut,
+                timeUntilReset = window.timeUntilReset(),
+                progressPercent = window.progressPercent(limits),
+                isLimitReached = window.isLimitReached(limits),
+                isApproachingLimit = window.isApproachingLimit(limits),
+                // Real counts from local databases
+                memoryEntriesCount = usageData.memoryEntriesCount,
+                sourcesCount = usageData.sourcesCount
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UsageState.empty()
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = UsageState.empty()
-    )
+    } else {
+        // Without real usage data (fallback)
+        combine(
+            usageWindow,
+            usageLimits,
+            entitlementsVM.entitlement
+        ) { window, limits, entitlement ->
+            UsageState(
+                window = window,
+                limits = limits,
+                plan = entitlement.planId(),
+                messagesUsed = window.messageCount,
+                messagesLimit = limits.messagesPerWindow,
+                tokensUsed = window.tokensUsed,
+                tokensLimit = limits.tokensPerWindow,
+                tokensIn = window.tokensIn,
+                tokensOut = window.tokensOut,
+                timeUntilReset = window.timeUntilReset(),
+                progressPercent = window.progressPercent(limits),
+                isLimitReached = window.isLimitReached(limits),
+                isApproachingLimit = window.isApproachingLimit(limits)
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UsageState.empty()
+        )
+    }
 
     /**
      * Track a message with token usage
@@ -136,7 +171,14 @@ data class UsageState(
     val timeUntilReset: String,
     val progressPercent: Float,
     val isLimitReached: Boolean,
-    val isApproachingLimit: Boolean
+    val isApproachingLimit: Boolean,
+    // Plan limits
+    val memoryLimit: Int? = limits.memoryEntryLimit,
+    val sourcesLimit: Int = limits.maxSources,
+    val uploadLimitMB: Int = limits.maxUploadMB,
+    // Real usage counts from local databases
+    val memoryEntriesCount: Int = 0,
+    val sourcesCount: Int = 0
 ) {
     /**
      * Messages remaining
