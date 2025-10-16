@@ -1,0 +1,154 @@
+package com.example.innovexia.memory.Mind.sources.indexer
+
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import com.example.innovexia.memory.Mind.sources.SourcesConfig
+import com.example.innovexia.memory.Mind.sources.store.entities.SourceEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
+
+/**
+ * Handles document file ingestion: .docx, .xlsx, .pptx, .odt, .rtf, etc.
+ */
+class DocumentIngest(
+    private val context: Context,
+    private val config: SourcesConfig
+) {
+
+    companion object {
+        private const val TAG = "DocumentIngest"
+
+        // Supported document types with their MIME types
+        val SUPPORTED_TYPES = mapOf(
+            // Microsoft Office (OpenXML)
+            "docx" to "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "xlsx" to "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "pptx" to "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+
+            // Microsoft Office (Legacy)
+            "doc" to "application/msword",
+            "xls" to "application/vnd.ms-excel",
+            "ppt" to "application/vnd.ms-powerpoint",
+
+            // OpenDocument Format
+            "odt" to "application/vnd.oasis.opendocument.text",
+            "ods" to "application/vnd.oasis.opendocument.spreadsheet",
+            "odp" to "application/vnd.oasis.opendocument.presentation",
+
+            // Rich Text and Other
+            "rtf" to "application/rtf",
+            "epub" to "application/epub+zip",
+
+            // E-book formats
+            "mobi" to "application/x-mobipocket-ebook",
+
+            // Other text-based formats
+            "tex" to "application/x-tex",
+            "latex" to "application/x-latex"
+        )
+
+        const val MAX_DOCUMENT_MB = 50 // Max 50MB for documents
+    }
+
+    /**
+     * Ingest a document file from URI
+     * @return SourceEntity with initial metadata
+     */
+    suspend fun ingestDocument(
+        personaId: String,
+        uri: Uri,
+        displayName: String
+    ): Result<SourceEntity> = withContext(Dispatchers.IO) {
+        try {
+            // Get file extension
+            val extension = displayName.substringAfterLast('.', "").lowercase()
+
+            if (!SUPPORTED_TYPES.containsKey(extension)) {
+                return@withContext Result.failure(
+                    Exception("Unsupported document type: .$extension")
+                )
+            }
+
+            val sourceId = UUID.randomUUID().toString()
+            val mimeType = SUPPORTED_TYPES[extension] ?: "application/octet-stream"
+
+            // Create storage directories
+            val sourceDir = getPersonaSourcesDir(personaId)
+            sourceDir.mkdirs()
+
+            val docFile = File(sourceDir, "$sourceId.$extension")
+
+            // Copy file to internal storage
+            var fileSize = 0L
+
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(docFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    var read: Int
+                    while (input.read(buffer).also { read = it } != -1) {
+                        output.write(buffer, 0, read)
+                        fileSize += read
+                    }
+                }
+            } ?: return@withContext Result.failure(Exception("Failed to open file"))
+
+            // Check file size
+            val maxBytes = MAX_DOCUMENT_MB * 1024 * 1024L
+            if (fileSize > maxBytes) {
+                docFile.delete()
+                return@withContext Result.failure(
+                    Exception("File too large: ${fileSize / 1024 / 1024}MB (max: ${MAX_DOCUMENT_MB}MB)")
+                )
+            }
+
+            // Estimate page count based on file size (rough approximation)
+            // Average: ~50KB per page for documents
+            val estimatedPages = maxOf(1, (fileSize / (50 * 1024)).toInt())
+
+            // Create SourceEntity
+            val entity = SourceEntity(
+                id = sourceId,
+                personaId = personaId,
+                type = "DOCUMENT",
+                displayName = displayName.substringBeforeLast('.'),
+                fileName = "$sourceId.$extension",
+                mime = mimeType,
+                bytes = fileSize,
+                pageCount = estimatedPages,
+                addedAt = System.currentTimeMillis(),
+                lastIndexedAt = null,
+                status = "NOT_INDEXED",
+                errorMsg = null,
+                storagePath = docFile.absolutePath,
+                thumbPath = null // No thumbnail for documents (could be added later)
+            )
+
+            Result.success(entity)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to ingest document", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Get persona-specific sources directory
+     */
+    private fun getPersonaSourcesDir(personaId: String): File {
+        return File(context.filesDir, "sources/$personaId")
+    }
+
+    /**
+     * Delete source files
+     */
+    suspend fun deleteSourceFiles(source: SourceEntity) = withContext(Dispatchers.IO) {
+        try {
+            File(source.storagePath).delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting source files", e)
+        }
+    }
+}

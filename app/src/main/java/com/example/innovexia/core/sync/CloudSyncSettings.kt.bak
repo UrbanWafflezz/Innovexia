@@ -1,0 +1,54 @@
+package com.example.innovexia.core.sync
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "cloud_sync_settings")
+
+/**
+ * Manages cloud sync settings using DataStore.
+ */
+class CloudSyncSettings(private val context: Context) {
+    private val CLOUD_SYNC_ENABLED = booleanPreferencesKey("cloud_sync_enabled")
+
+    /**
+     * Flow of the cloud sync enabled state.
+     */
+    val cloudSyncEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[CLOUD_SYNC_ENABLED] ?: false
+    }
+
+    /**
+     * Sets the cloud sync enabled state.
+     */
+    suspend fun set(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[CLOUD_SYNC_ENABLED] = enabled
+        }
+    }
+
+    /**
+     * Gets the current cloud sync enabled state (suspending).
+     */
+    suspend fun get(): Boolean {
+        return context.dataStore.data.map { prefs ->
+            prefs[CLOUD_SYNC_ENABLED] ?: false
+        }.first()
+    }
+}
+
+// Extension to get first value from Flow
+private suspend fun <T> Flow<T>.first(): T {
+    var result: T? = null
+    collect {
+        result = it
+        return@collect
+    }
+    return result!!
+}

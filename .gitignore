@@ -49,50 +49,51 @@ secrets.properties
 # ============================================
 # HIDE SOURCE CODE - Keep code private
 # ============================================
+# COMMENTED OUT TO ALLOW CI/CD BUILDS
 
-# Hide all Kotlin/Java source code
-app/src/main/java/**/*.kt
-app/src/main/java/**/*.java
-app/src/debug/java/**/*.kt
-app/src/debug/java/**/*.java
-app/src/release/java/**/*.kt
-app/src/release/java/**/*.java
+# # Hide all Kotlin/Java source code
+# app/src/main/java/**/*.kt
+# app/src/main/java/**/*.java
+# app/src/debug/java/**/*.kt
+# app/src/debug/java/**/*.java
+# app/src/release/java/**/*.kt
+# app/src/release/java/**/*.java
 
-# Hide all test code
-app/src/test/**/*.kt
-app/src/test/**/*.java
-app/src/androidTest/**/*.kt
-app/src/androidTest/**/*.java
+# # Hide all test code
+# app/src/test/**/*.kt
+# app/src/test/**/*.java
+# app/src/androidTest/**/*.kt
+# app/src/androidTest/**/*.java
 
-# Hide all XML layouts and resources
-app/src/main/res/layout/**/*.xml
-app/src/main/res/layout-land/**/*.xml
-app/src/main/res/layout-night/**/*.xml
-app/src/main/res/values/**/*.xml
-app/src/main/res/values-night/**/*.xml
-app/src/main/res/drawable/**/*
-app/src/main/res/drawable-*/**/*
-app/src/main/res/mipmap-*/**/*
-app/src/main/res/color/**/*.xml
-app/src/main/res/menu/**/*.xml
-app/src/main/res/navigation/**/*.xml
-app/src/main/res/anim/**/*.xml
-app/src/main/res/animator/**/*.xml
+# # Hide all XML layouts and resources
+# app/src/main/res/layout/**/*.xml
+# app/src/main/res/layout-land/**/*.xml
+# app/src/main/res/layout-night/**/*.xml
+# app/src/main/res/values/**/*.xml
+# app/src/main/res/values-night/**/*.xml
+# app/src/main/res/drawable/**/*
+# app/src/main/res/drawable-*/**/*
+# app/src/main/res/mipmap-*/**/*
+# app/src/main/res/color/**/*.xml
+# app/src/main/res/menu/**/*.xml
+# app/src/main/res/navigation/**/*.xml
+# app/src/main/res/anim/**/*.xml
+# app/src/main/res/animator/**/*.xml
 
-# Hide AndroidManifest.xml (contains app structure)
-app/src/main/AndroidManifest.xml
-app/src/debug/AndroidManifest.xml
-app/src/release/AndroidManifest.xml
+# # Hide AndroidManifest.xml (contains app structure)
+# app/src/main/AndroidManifest.xml
+# app/src/debug/AndroidManifest.xml
+# app/src/release/AndroidManifest.xml
 
-# Hide assets
-app/src/main/assets/**/*
+# # Hide assets
+# app/src/main/assets/**/*
 
-# Hide raw resources
-app/src/main/res/raw/**/*
+# # Hide raw resources
+# app/src/main/res/raw/**/*
 
-# Hide all documentation and markdown files (except README.md)
-*.md
-!README.md
+# # Hide all documentation and markdown files (except README.md)
+# *.md
+# !README.md
 
 # NOTE: Gradle files are NOT hidden so CI/CD can build the project
 # app/build.gradle.kts - needed for builds
@@ -100,27 +101,27 @@ app/src/main/res/raw/**/*
 # settings.gradle.kts - needed for builds
 # gradle.properties - needed for builds
 
-# Hide all shell scripts
-*.sh
+# # Hide all shell scripts
+# *.sh
 
-# Hide Firebase rules
-*.rules
+# # Hide Firebase rules
+# *.rules
 
-# Hide all JSON config files
-app/src/main/**/*.json
+# # Hide all JSON config files
+# app/src/main/**/*.json
 
-# Hide proguard rules
-app/proguard-rules.pro
+# # Hide proguard rules
+# app/proguard-rules.pro
 
-# Hide IDE settings
-.idea/
-.claude/
+# # Hide IDE settings
+# .idea/
+# .claude/
 
-# Hide documentation
-docs/
+# # Hide documentation
+# docs/
 
-# Hide example files
-*.example
+# # Hide example files
+# *.example
 
-# Hide stripe server folder
-stripe-server/
+# # Hide stripe server folder
+# stripe-server/

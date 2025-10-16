@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== Helper Functions ====================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isValidSubscriptionPlan(plan) {
+      return plan in ['free', 'core', 'pro', 'team'];
+    }
+
+    function isValidSubscriptionStatus(status) {
+      return status in ['active', 'trialing', 'past_due', 'canceled', 'inactive'];
+    }
+
+    // ==================== User Subscriptions ====================
+
+    match /users/{uid}/subscription/current {
+      // Users can read their own subscription
+      allow read: if isSignedIn() && isOwner(uid);
+
+      // Only Cloud Functions can write subscriptions
+      // (Enforced by checking that there's no auth context, or using service account)
+      allow write: if false;
+    }
+
+    // ==================== User Usage Tracking ====================
+
+    match /users/{uid}/usage/{periodId} {
+      // Users can read their own usage
+      allow read: if isSignedIn() && isOwner(uid);
+
+      // Only Cloud Functions can write usage data
+      allow write: if false;
+    }
+
+    // ==================== Rate Limiting ====================
+
+    match /users/{uid}/rate/now {
+      // Users can read their own rate limit status
+      allow read: if isSignedIn() && isOwner(uid);
+
+      // Only Cloud Functions can write rate limit data
+      allow write: if false;
+    }
+
+    // ==================== User Profile (Existing) ====================
+
+    match /users/{uid} {
+      // Users can read and update their own profile
+      allow read: if isSignedIn() && isOwner(uid);
+      allow update: if isSignedIn() && isOwner(uid);
+      allow create: if isSignedIn() && isOwner(uid);
+      allow delete: if isSignedIn() && isOwner(uid);
+    }
+
+    // ==================== Chat Data (Existing) ====================
+
+    match /users/{uid}/chats/{chatId} {
+      allow read, write: if isSignedIn() && isOwner(uid);
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && isOwner(uid);
+      }
+    }
+
+    // ==================== Personas (Existing) ====================
+
+    match /users/{uid}/personas/{personaId} {
+      allow read, write: if isSignedIn() && isOwner(uid);
+    }
+
+    // ==================== Settings (Existing) ====================
+
+    match /users/{uid}/settings {
+      allow read, write: if isSignedIn() && isOwner(uid);
+    }
+  }
+}
