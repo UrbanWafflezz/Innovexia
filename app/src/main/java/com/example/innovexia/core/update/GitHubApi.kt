@@ -2,7 +2,6 @@ package com.example.innovexia.core.update
 
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -56,13 +55,8 @@ interface GitHubApi {
                         })
                     }
 
-                    // Add HTTP logging in debug builds
-                    if (BuildConfig.DEBUG) {
-                        val loggingInterceptor = HttpLoggingInterceptor().apply {
-                            level = HttpLoggingInterceptor.Level.BODY
-                        }
-                        addInterceptor(loggingInterceptor)
-                    }
+                    // HTTP logging is only available in debug builds
+                    // Note: HttpLoggingInterceptor is debugImplementation only
 
                     // Add retry interceptor for transient failures
                     addInterceptor(RetryInterceptor(maxRetries = 3))
