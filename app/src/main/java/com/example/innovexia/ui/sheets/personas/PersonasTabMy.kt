@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -76,7 +75,6 @@ fun PersonasTabMy(
                 PersonaFilter.ALL -> true
                 PersonaFilter.ACTIVE -> persona.id == selectedPersonaId
                 PersonaFilter.FAVORITES -> persona.starred
-                PersonaFilter.RECENT -> persona.lastUsedFormatted != null
             }
         }
         .let { list ->
@@ -115,7 +113,7 @@ fun PersonasTabMy(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Minimal filter buttons
@@ -126,12 +124,12 @@ fun PersonasTabMy(
                         modifier = Modifier.height(32.dp),
                         shape = RoundedCornerShape(16.dp),
                         color = if (isSelected) {
-                            InnovexiaTheme.colors.goldDim.copy(alpha = 0.2f)
+                            Color(0xFFE6B84A).copy(alpha = 0.2f)
                         } else {
-                            Color(0xFF1E293B).copy(alpha = 0.5f)
+                            Color(0xFF2A2A2A).copy(alpha = 0.6f)
                         },
                         border = if (isSelected) {
-                            BorderStroke(1.dp, InnovexiaTheme.colors.goldDim.copy(alpha = 0.6f))
+                            BorderStroke(1.dp, Color(0xFFE6B84A).copy(alpha = 0.6f))
                         } else null
                     ) {
                         Row(
@@ -144,7 +142,7 @@ fun PersonasTabMy(
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                                 tint = if (isSelected) {
-                                    InnovexiaTheme.colors.goldDim
+                                    Color(0xFFE6B84A)
                                 } else {
                                     Color(0xFF94A3B8)
                                 }
@@ -155,7 +153,7 @@ fun PersonasTabMy(
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 color = if (isSelected) {
-                                    InnovexiaTheme.colors.goldDim
+                                    Color(0xFFE6B84A)
                                 } else {
                                     Color(0xFF94A3B8)
                                 }
@@ -205,8 +203,7 @@ fun PersonasTabMy(
 enum class PersonaFilter(val label: String, val shortLabel: String, val icon: ImageVector) {
     ALL("All", "All", Icons.Default.Person),
     ACTIVE("Active", "Active", Icons.Default.CheckCircle),
-    FAVORITES("Favorites", "Starred", Icons.Default.Star),
-    RECENT("Recently Used", "Recent", Icons.Default.History)
+    FAVORITES("Favorites", "Starred", Icons.Default.Star)
 }
 
 enum class PersonaSort(val label: String) {
@@ -238,7 +235,7 @@ internal fun EmptyState(
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = InnovexiaTheme.colors.personaMutedText,
+            color = Color(0xFFA89968),
             textAlign = TextAlign.Center
         )
     }

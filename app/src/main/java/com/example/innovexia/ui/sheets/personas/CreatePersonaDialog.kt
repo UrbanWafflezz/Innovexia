@@ -3,6 +3,7 @@ package com.example.innovexia.ui.sheets.personas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,21 +13,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.innovexia.core.persona.*
+import com.example.innovexia.ui.theme.DarkColors
+import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.ui.theme.InnovexiaTheme
+import com.example.innovexia.ui.theme.LightColors
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -122,6 +131,8 @@ fun CreatePersonaDialog(
         )
     }
 
+    val darkTheme = isSystemInDarkTheme()
+
     Dialog(
         onDismissRequest = {
             if (hasChanges) {
@@ -136,17 +147,52 @@ fun CreatePersonaDialog(
             dismissOnClickOutside = !hasChanges
         )
     ) {
-        Surface(
+        // Material 3 container matching Personas sheet design
+        Box(
             modifier = modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.9f),
-            shape = RoundedCornerShape(24.dp),
-            color = InnovexiaTheme.colors.personaCardBg
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .fillMaxWidth()
+                .fillMaxHeight(0.88f)
+                .imePadding()
+                .navigationBarsPadding()
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    if (darkTheme) {
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                InnovexiaColors.DarkGradientStart,
+                                InnovexiaColors.DarkGradientMid,
+                                InnovexiaColors.DarkGradientEnd
+                            )
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                InnovexiaColors.LightGradientStart,
+                                InnovexiaColors.LightGradientMid,
+                                InnovexiaColors.LightGradientEnd
+                            )
+                        )
+                    }
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (darkTheme) Color(0xFF404040).copy(alpha = 0.5f) else InnovexiaColors.LightBorder.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(24.dp)
+                )
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Header
-                DialogHeader(
+            CompositionLocalProvider(
+                LocalContentColor provides if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    // Header
+                    DialogHeader(
                     title = if (editPersonaId != null) "Edit Persona" else "Create Persona",
+                    darkTheme = darkTheme,
                     onClose = {
                         if (hasChanges) {
                             showUnsavedDialog = true
@@ -156,16 +202,27 @@ fun CreatePersonaDialog(
                     }
                 )
 
+                Spacer(Modifier.height(12.dp))
+
                 // Simple layout with tabs
                 Column(modifier = Modifier.weight(1f)) {
                     TabRow(
                         selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it }
+                        onTabSelected = { selectedTab = it },
+                        darkTheme = darkTheme
                     )
+
+                    HorizontalDivider(
+                        Modifier.padding(top = 6.dp, bottom = 6.dp),
+                        color = if (darkTheme) Color(0xFF3A3A3A)
+                        else LightColors.SecondaryText.copy(alpha = 0.2f)
+                    )
+
                     TabContent(
                         selectedTab = selectedTab,
                         draft = draft,
                         errors = errors,
+                        darkTheme = darkTheme,
                         onUpdate = { viewModel.updateDraft(it) },
                         modifier = Modifier.weight(1f)
                     )
@@ -176,6 +233,7 @@ fun CreatePersonaDialog(
                     busy = busy,
                     hasChanges = hasChanges,
                     isValid = errors.isEmpty() && draft.name.isNotBlank(),
+                    darkTheme = darkTheme,
                     onDiscard = {
                         if (hasChanges) {
                             showUnsavedDialog = true
@@ -193,6 +251,7 @@ fun CreatePersonaDialog(
                         onDismiss()
                     }
                 )
+                }
             }
         }
     }
@@ -201,25 +260,33 @@ fun CreatePersonaDialog(
 @Composable
 private fun DialogHeader(
     title: String,
+    darkTheme: Boolean,
     onClose: () -> Unit
 ) {
     Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .height(40.dp)
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+            color = if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.3).sp
         )
         IconButton(
             onClick = onClose,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(36.dp)
         ) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
+            Icon(
+                Icons.Rounded.Close,
+                contentDescription = "Close",
+                tint = if (darkTheme) Color(0xFFA89968) else LightColors.SecondaryText,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
@@ -227,7 +294,8 @@ private fun DialogHeader(
 @Composable
 private fun TabRow(
     selectedTab: Int,
-    onTabSelected: (Int) -> Unit
+    onTabSelected: (Int) -> Unit,
+    darkTheme: Boolean
 ) {
     val tabs = listOf(
         "Identity", "Behavior", "System", "Memory", "Sources"
@@ -235,28 +303,43 @@ private fun TabRow(
 
     ScrollableTabRow(
         selectedTabIndex = selectedTab,
-        edgePadding = 16.dp,
-        containerColor = InnovexiaTheme.colors.personaCardBg,
-        contentColor = MaterialTheme.colorScheme.primary,
-        divider = {
-            HorizontalDivider(
-                color = InnovexiaTheme.colors.personaMutedText.copy(alpha = 0.1f)
-            )
-        }
+        edgePadding = 0.dp,
+        containerColor = Color.Transparent,
+        contentColor = if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText,
+        indicator = { tabPositions ->
+            if (selectedTab >= 0 && selectedTab < tabPositions.size) {
+                TabRowDefaults.SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                    color = if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold,
+                    height = 2.dp
+                )
+            }
+        },
+        divider = {}
     ) {
         tabs.forEachIndexed { index, title ->
             Tab(
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },
-                selectedContentColor = MaterialTheme.colorScheme.primary,
-                unselectedContentColor = InnovexiaTheme.colors.personaMutedText,
                 text = {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                        color = if (index == selectedTab) {
+                            if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText
+                        } else {
+                            if (darkTheme) Color(0xFFA89968).copy(alpha = 0.8f)
+                            else LightColors.SecondaryText.copy(alpha = 0.7f)
+                        },
+                        fontWeight = if (index == selectedTab) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelLarge
                     )
-                }
+                },
+                modifier = Modifier
+                    .height(48.dp)
+                    .widthIn(min = 80.dp)
             )
         }
     }
@@ -267,16 +350,17 @@ private fun TabContent(
     selectedTab: Int,
     draft: PersonaDraftDto,
     errors: Map<String, String>,
+    darkTheme: Boolean,
     onUpdate: ((PersonaDraftDto) -> PersonaDraftDto) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when (selectedTab) {
-            0 -> IdentityTab(draft, errors, onUpdate)
-            1 -> BehaviorTab(draft, onUpdate)
-            2 -> SystemTab(draft, onUpdate)
-            3 -> MemoryTab(draft, onUpdate)
-            4 -> SourcesTab(draft, onUpdate)
+            0 -> IdentityTab(draft, errors, darkTheme, onUpdate)
+            1 -> BehaviorTab(draft, darkTheme, onUpdate)
+            2 -> SystemTab(draft, darkTheme, onUpdate)
+            3 -> MemoryTab(draft, darkTheme, onUpdate)
+            4 -> SourcesTab(draft, darkTheme, onUpdate)
         }
     }
 }
@@ -289,6 +373,7 @@ private fun TabContent(
 private fun IdentityTab(
     draft: PersonaDraftDto,
     errors: Map<String, String>,
+    darkTheme: Boolean,
     onUpdate: ((PersonaDraftDto) -> PersonaDraftDto) -> Unit
 ) {
     LazyColumn(
@@ -312,7 +397,8 @@ private fun IdentityTab(
                 isError = errors.containsKey("name"),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                colors = customTextFieldColors(darkTheme)
             )
         }
 
@@ -326,7 +412,8 @@ private fun IdentityTab(
                     onValueChange = { if (it.length <= 1) onUpdate { d -> d.copy(initial = it.uppercase()) } },
                     label = { Text("Initial") },
                     modifier = Modifier.width(100.dp),
-                    singleLine = true
+                    singleLine = true,
+                    colors = customTextFieldColors(darkTheme)
                 )
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -357,7 +444,8 @@ private fun IdentityTab(
                 supportingText = { Text("${draft.bio.length}/140") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
-                maxLines = 3
+                maxLines = 3,
+                colors = customTextFieldColors(darkTheme)
             )
         }
 
@@ -368,7 +456,8 @@ private fun IdentityTab(
                 label = { Text("Greeting") },
                 placeholder = { Text("How can I help you today?") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                colors = customTextFieldColors(darkTheme)
             )
         }
 
@@ -381,6 +470,7 @@ private fun IdentityTab(
                 label = { Text("Tags (press Enter to add)") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                colors = customTextFieldColors(darkTheme),
                 trailingIcon = {
                     if (tagInput.isNotBlank() && draft.tags.size < 6) {
                         TextButton(onClick = {
@@ -412,7 +502,10 @@ private fun IdentityTab(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Set as default for new chats")
+                Text(
+                    "Set as default for new chats",
+                    color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
+                )
                 Switch(
                     checked = draft.isDefault,
                     onCheckedChange = { onUpdate { d -> d.copy(isDefault = it) } }
@@ -429,6 +522,7 @@ private fun IdentityTab(
 @Composable
 private fun BehaviorTab(
     draft: PersonaDraftDto,
+    darkTheme: Boolean,
     onUpdate: ((PersonaDraftDto) -> PersonaDraftDto) -> Unit
 ) {
     LazyColumn(
@@ -479,7 +573,8 @@ private fun BehaviorTab(
             Text(
                 text = "Personality Traits",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
             )
         }
 
@@ -527,7 +622,8 @@ private fun BehaviorTab(
             Text(
                 text = "Model Parameters",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
             )
         }
 
@@ -611,7 +707,8 @@ private fun BehaviorTab(
                     Text(
                         "Self-Check",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
                     )
                     Text(
                         text = "Review output before sending for accuracy",
@@ -639,6 +736,7 @@ private fun BehaviorTab(
 @Composable
 private fun SystemTab(
     draft: PersonaDraftDto,
+    darkTheme: Boolean,
     onUpdate: ((PersonaDraftDto) -> PersonaDraftDto) -> Unit
 ) {
     LazyColumn(
@@ -652,7 +750,8 @@ private fun SystemTab(
             Text(
                 text = "System Instructions",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
             )
         }
 
@@ -665,7 +764,8 @@ private fun SystemTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                colors = customTextFieldColors(darkTheme)
             )
         }
 
@@ -713,7 +813,8 @@ private fun SystemTab(
                     Text(
                         text = "Rules",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
                     )
                     TextButton(onClick = {
                         onUpdate { d ->
@@ -776,6 +877,8 @@ private fun RuleCard(
     onUpdate: (SystemRule) -> Unit,
     onRemove: () -> Unit
 ) {
+    val darkTheme = isSystemInDarkTheme()
+
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -794,7 +897,8 @@ private fun RuleCard(
                 Text(
                     text = "Rule",
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
                 )
                 IconButton(
                     onClick = onRemove,
@@ -810,7 +914,8 @@ private fun RuleCard(
                 label = { Text("When") },
                 placeholder = { Text("always, on_request, etc.") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                colors = customTextFieldColors(darkTheme)
             )
 
             OutlinedTextField(
@@ -819,7 +924,8 @@ private fun RuleCard(
                 label = { Text("Do") },
                 placeholder = { Text("Cite sources") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 2
+                minLines = 2,
+                colors = customTextFieldColors(darkTheme)
             )
         }
     }
@@ -832,6 +938,7 @@ private fun RuleCard(
 @Composable
 private fun MemoryTab(
     draft: PersonaDraftDto,
+    darkTheme: Boolean,
     onUpdate: ((PersonaDraftDto) -> PersonaDraftDto) -> Unit
 ) {
     LazyColumn(
@@ -845,7 +952,8 @@ private fun MemoryTab(
             Text(
                 text = "Memory System",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
             )
         }
 
@@ -896,7 +1004,8 @@ private fun MemoryTab(
                     Text(
                         "Enable Memory",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
                     )
                     Text(
                         text = "Remember conversations and user preferences",
@@ -922,6 +1031,7 @@ private fun MemoryTab(
 @Composable
 private fun SourcesTab(
     draft: PersonaDraftDto,
+    darkTheme: Boolean,
     onUpdate: ((PersonaDraftDto) -> PersonaDraftDto) -> Unit
 ) {
     LazyColumn(
@@ -935,7 +1045,8 @@ private fun SourcesTab(
             Text(
                 text = "Sources System",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
             )
         }
 
@@ -986,7 +1097,8 @@ private fun SourcesTab(
                     Text(
                         "Enable Sources",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
                     )
                     Text(
                         text = "Access uploaded documents for context",
@@ -1014,22 +1126,18 @@ private fun DialogFooter(
     busy: Boolean,
     hasChanges: Boolean,
     isValid: Boolean,
+    darkTheme: Boolean,
     onDiscard: () -> Unit,
     onSaveDraft: () -> Unit,
     onPublish: () -> Unit
 ) {
-    Surface(
-        tonalElevation = 3.dp,
-        shadowElevation = 8.dp,
-        color = InnovexiaTheme.colors.personaCardBg
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             // Cancel button
             TextButton(
                 onClick = onDiscard,
@@ -1038,7 +1146,8 @@ private fun DialogFooter(
             ) {
                 Text(
                     "Cancel",
-                    style = MaterialTheme.typography.labelMedium
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (darkTheme) Color(0xFFA89968) else LightColors.SecondaryText
                 )
             }
 
@@ -1049,12 +1158,20 @@ private fun DialogFooter(
                 onClick = onSaveDraft,
                 enabled = isValid && !busy,
                 modifier = Modifier.height(40.dp),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (darkTheme) Color(0xFFD4AF37) else InnovexiaColors.Gold
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (darkTheme) Color(0xFFD4AF37).copy(alpha = 0.5f) else InnovexiaColors.Gold.copy(alpha = 0.5f)
+                )
             ) {
                 if (busy) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
+                        color = if (darkTheme) Color(0xFFD4AF37) else InnovexiaColors.Gold
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                 }
@@ -1070,10 +1187,11 @@ private fun DialogFooter(
                 onClick = onPublish,
                 enabled = isValid && !busy,
                 modifier = Modifier.height(40.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold,
+                    contentColor = if (darkTheme) Color(0xFF0F172A) else Color.White,
+                    disabledContainerColor = if (darkTheme) Color(0xFF3A3A3A) else Color(0xFFE0E0E0)
                 )
             ) {
                 Text(
@@ -1083,7 +1201,6 @@ private fun DialogFooter(
                 )
             }
         }
-    }
 }
 
 // ============================================================
@@ -1151,6 +1268,8 @@ private fun TagChip(
 
 @Composable
 private fun VariableChip(variable: String) {
+    val darkTheme = isSystemInDarkTheme()
+
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
@@ -1159,6 +1278,7 @@ private fun VariableChip(variable: String) {
             text = variable,
             style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
+            color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
     }
@@ -1172,12 +1292,18 @@ private fun SliderField(
     valueRange: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier
 ) {
+    val darkTheme = isSystemInDarkTheme()
+
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = label, style = MaterialTheme.typography.labelMedium)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
+            )
             Text(
                 text = "%.2f".format(value),
                 style = MaterialTheme.typography.labelSmall,
@@ -1204,6 +1330,7 @@ private fun SliderFieldWithHelp(
     modifier: Modifier = Modifier
 ) {
     var showHelp by remember { mutableStateOf(false) }
+    val darkTheme = isSystemInDarkTheme()
 
     Column(modifier = modifier) {
         Row(
@@ -1215,7 +1342,11 @@ private fun SliderFieldWithHelp(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = label, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
+                )
                 IconButton(
                     onClick = { showHelp = !showHelp },
                     modifier = Modifier.size(20.dp)
@@ -1283,6 +1414,7 @@ private fun DropdownField(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val darkTheme = isSystemInDarkTheme()
 
     Box(modifier = modifier) {
         OutlinedTextField(
@@ -1291,6 +1423,7 @@ private fun DropdownField(
             label = { Text(label) },
             readOnly = true,
             modifier = Modifier.fillMaxWidth(),
+            colors = customTextFieldColors(darkTheme),
             trailingIcon = {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -1327,6 +1460,7 @@ private fun DropdownFieldWithHelp(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val darkTheme = isSystemInDarkTheme()
 
     Column(modifier = modifier) {
         Box {
@@ -1336,6 +1470,7 @@ private fun DropdownFieldWithHelp(
                 label = { Text(label) },
                 readOnly = true,
                 modifier = Modifier.fillMaxWidth(),
+                colors = customTextFieldColors(darkTheme),
                 trailingIcon = {
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(
@@ -1397,12 +1532,17 @@ private fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val darkTheme = isSystemInDarkTheme()
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label)
+        Text(
+            label,
+            color = if (darkTheme) Color(0xFFE5E7EB) else Color(0xFF1F2937)
+        )
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange
@@ -1420,4 +1560,21 @@ private val colorSwatches = listOf(
     0xFFEF4444, // Red
     0xFF06B6D4, // Cyan
     0xFFF59E0B  // Orange
+)
+
+/**
+ * Custom TextField colors that match our theme
+ */
+@Composable
+private fun customTextFieldColors(darkTheme: Boolean) = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary,
+    unfocusedTextColor = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary,
+    disabledTextColor = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
+    focusedBorderColor = if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold,
+    unfocusedBorderColor = if (darkTheme) Color(0xFF3A3A3A) else Color(0xFFE0E0E0),
+    focusedLabelColor = if (darkTheme) Color(0xFFD4AF37) else InnovexiaColors.Gold,
+    unfocusedLabelColor = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
+    cursorColor = if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold,
+    focusedPlaceholderColor = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
+    unfocusedPlaceholderColor = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary
 )

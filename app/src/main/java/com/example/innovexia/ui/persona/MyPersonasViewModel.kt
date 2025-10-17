@@ -76,10 +76,10 @@ class MyPersonasViewModel(
         }
     }
 
-    fun setActivePersona(personaId: String) = viewModelScope.launch {
+    fun setActivePersona(personaId: String?) = viewModelScope.launch {
         prefs.setActivePersonaId(ownerId, personaId)
-        // Update lastUsedAt timestamp
-        repo.updateLastUsed(personaId)
+        // Update lastUsedAt timestamp (only if personaId is not null)
+        personaId?.let { repo.updateLastUsed(it) }
     }
 
     /**
@@ -150,9 +150,17 @@ class MyPersonasViewModel(
 
     fun toggleDefault(id: String) = viewModelScope.launch {
         runCatching {
-            repo.setDefaultPersona(ownerId, id)
+            // Check if this persona is already default
+            val currentDefault = repo.getDefaultPersona(ownerId)
+            if (currentDefault?.id == id) {
+                // It's already default, so unset it (clear all defaults)
+                repo.clearDefaultPersona(ownerId)
+            } else {
+                // Set as default
+                repo.setDefaultPersona(ownerId, id)
+            }
         }.onFailure {
-            _error.emit("Failed to set default")
+            _error.emit("Failed to toggle default")
         }
     }
 

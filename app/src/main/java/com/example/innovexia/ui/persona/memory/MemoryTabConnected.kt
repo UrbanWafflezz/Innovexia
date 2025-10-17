@@ -25,18 +25,19 @@ import com.example.innovexia.ui.theme.InnovexiaColors
 /**
  * Memory Tab connected to real backend
  * Replaces mock data with actual Room database
+ * Now supports external search query from top search bar
  */
 @Composable
 fun MemoryTabConnected(
     persona: Persona,
     modifier: Modifier = Modifier,
     darkTheme: Boolean = isSystemInDarkTheme(),
+    searchQuery: String = "", // External search query from parent
     viewModel: MemoryViewModel = viewModel()
 ) {
     // State
     var memoryEnabled by remember { mutableStateOf(true) }
     var selectedCategory by remember { mutableStateOf(MemoryCategory.All) }
-    var searchQuery by remember { mutableStateOf("") }
     var selectedMemory by remember { mutableStateOf<MemoryItem?>(null) }
     var currentPage by remember { mutableStateOf(0) }
 
@@ -55,7 +56,7 @@ fun MemoryTabConnected(
     val allMemories by viewModel.observeFeed(persona.id, selectedCategory, searchQuery)
         .collectAsState(initial = emptyList())
 
-    // Reset to page 0 when filters change
+    // Reset to page 0 when filters or search query changes
     LaunchedEffect(selectedCategory, searchQuery) {
         currentPage = 0
     }
@@ -83,33 +84,9 @@ fun MemoryTabConnected(
             // Memory enabled - show full UI
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(vertical = 12.dp, horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header with toggle and info
-                item {
-                    MemoryHeader(
-                        persona = persona,
-                        isMemoryEnabled = memoryEnabled,
-                        onMemoryToggleChange = { enabled ->
-                            viewModel.setMemoryEnabled(persona.id, enabled)
-                            memoryEnabled = enabled
-                        },
-                        darkTheme = darkTheme
-                    )
-                }
-
-                // Search bar
-                item {
-                    MemorySearchBar(
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = { query ->
-                            searchQuery = query
-                        },
-                        darkTheme = darkTheme
-                    )
-                }
-
                 // Category tabs
                 item {
                     MemoryCategoryTabs(
@@ -121,45 +98,47 @@ fun MemoryTabConnected(
                     )
                 }
 
-                // Overview cards (only show when All category is selected)
-                if (selectedCategory == MemoryCategory.All && searchQuery.isBlank()) {
-                    item {
-                        MemoryOverviewCards(
-                            categorySummaries = categorySummaries,
-                            onCategoryClick = { category ->
-                                selectedCategory = category
-                            },
-                            darkTheme = darkTheme
-                        )
-                    }
-                }
-
-                // Section header for feed
+                // Section header for feed with Material 3 design
                 if (memories.isNotEmpty()) {
                     item {
-                        Row(
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (darkTheme) Color(0xFF1E2530).copy(alpha = 0.5f) else Color(0xFFF8FAFC),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(vertical = 4.dp)
                         ) {
-                            Text(
-                                text = when {
-                                    searchQuery.isNotBlank() -> "Search Results"
-                                    selectedCategory == MemoryCategory.All -> "All Memories"
-                                    else -> selectedCategory.displayName
-                                },
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary
-                            )
-                            Text(
-                                text = "${allMemories.size} ${if (allMemories.size == 1) "memory" else "memories"}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
-                                fontSize = 12.sp
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = when {
+                                        searchQuery.isNotBlank() -> "Search Results"
+                                        selectedCategory == MemoryCategory.All -> "All Memories"
+                                        else -> selectedCategory.displayName
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (darkTheme) InnovexiaColors.GoldDim.copy(alpha = 0.2f) else InnovexiaColors.Gold.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "${allMemories.size} ${if (allMemories.size == 1) "memory" else "memories"}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

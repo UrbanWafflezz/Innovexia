@@ -299,7 +299,13 @@ fun HomeScreen(
                         initial = persona.initial,
                         colorHex = persona.color
                     )
+                } else {
+                    // Persona was deleted, clear selection
+                    selectedPersona = null
                 }
+            } else {
+                // No active persona selected (user turned it off or never selected one)
+                selectedPersona = null
             }
         }
     }

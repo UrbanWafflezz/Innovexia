@@ -137,6 +137,14 @@ class PersonaRepository(
     }
 
     /**
+     * Clear default persona (unstar all)
+     */
+    suspend fun clearDefaultPersona(ownerId: String) {
+        val now = System.currentTimeMillis()
+        personaDao.clearAllDefaults(ownerId, now)
+    }
+
+    /**
      * Get default persona for owner
      */
     suspend fun getDefaultPersona(ownerId: String): Persona? {

@@ -62,7 +62,7 @@ fun MemoryOverviewCards(
 }
 
 /**
- * Individual category summary card
+ * Individual category summary card with improved Material 3 design
  */
 @Composable
 private fun CategorySummaryCard(
@@ -72,13 +72,13 @@ private fun CategorySummaryCard(
 ) {
     val gradientColors = if (darkTheme) {
         listOf(
-            Color(0xFF1E2530).copy(alpha = 0.8f),
-            Color(0xFF141A22).copy(alpha = 0.6f)
+            Color(0xFF1E2530).copy(alpha = 0.9f),
+            Color(0xFF141A22).copy(alpha = 0.7f)
         )
     } else {
         listOf(
-            Color.White.copy(alpha = 0.9f),
-            Color(0xFFF8FAFC).copy(alpha = 0.7f)
+            Color.White.copy(alpha = 0.95f),
+            Color(0xFFF8FAFC).copy(alpha = 0.85f)
         )
     }
 
@@ -94,20 +94,20 @@ private fun CategorySummaryCard(
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         color = Color.Transparent,
         border = BorderStroke(
-            1.dp,
+            1.5.dp,
             Brush.linearGradient(
                 colors = listOf(
-                    accentColor.copy(alpha = 0.3f),
-                    accentColor.copy(alpha = 0.1f)
+                    accentColor.copy(alpha = 0.4f),
+                    accentColor.copy(alpha = 0.15f)
                 )
             )
         ),
         modifier = Modifier
-            .width(140.dp)
-            .height(100.dp)
+            .width(150.dp)
+            .height(120.dp)
     ) {
         Box(
             modifier = Modifier
@@ -119,43 +119,44 @@ private fun CategorySummaryCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(14.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Category icon and name
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = summary.category.emoji,
-                        fontSize = 20.sp
-                    )
-                    Text(
-                        text = summary.category.displayName,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary,
-                        fontSize = 12.sp
-                    )
-                }
-
-                // Count and view button
                 Column(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "${summary.count}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor,
+                        text = summary.category.emoji,
                         fontSize = 28.sp
+                    )
+                    Text(
+                        text = summary.category.displayName,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary,
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
+                }
+
+                // Count section
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "${summary.count}",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = accentColor,
+                        fontSize = 32.sp
                     )
                     Text(
                         text = if (summary.count == 1) "memory" else "memories",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        maxLines = 1
                     )
                 }
             }

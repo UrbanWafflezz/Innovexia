@@ -11,8 +11,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,54 +70,12 @@ fun PersonaCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showPublicDialog by remember { mutableStateOf(false) }
 
-    // Animated glow effect for active state
-    val infiniteTransition = rememberInfiniteTransition(label = "glow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowAlpha"
-    )
-
-    // Card styling with green glow for active state
-    val greenGlow = Color(0xFF10B981) // Emerald green
-    val cardBorderColor = if (isActive) {
-        greenGlow
-    } else {
-        InnovexiaTheme.colors.personaCardBorder
-    }
-
-    val cardBorderWidth = if (isActive) 2.5.dp else 1.dp
-
-    val cardModifier = if (isActive) {
-        modifier
-            .shadow(
-                elevation = 12.dp,
-                shape = RoundedCornerShape(16.dp),
-                spotColor = greenGlow.copy(alpha = 0.4f)
-            )
-            .drawBehind {
-                // Animated green glow ring
-                drawRoundRect(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            greenGlow.copy(alpha = glowAlpha * 0.8f),
-                            Color.Transparent
-                        )
-                    ),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()),
-                    style = Stroke(width = 6.dp.toPx())
-                )
-            }
-    } else {
-        modifier
-    }
+    // Card styling matching side menu chat cards - subtle active state
+    val cardBorderColor = Color(0xFF404040).copy(alpha = 0.5f)
+    val cardBorderWidth = 1.dp
 
     Card(
-        modifier = cardModifier
+        modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight() // Allow card to size based on content
             .combinedClickable(
@@ -124,9 +88,9 @@ fun PersonaCard(
                 role = Role.Button
                 contentDescription = "Persona card: ${persona.name}. ${persona.summary}"
             },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = InnovexiaTheme.colors.personaCardBg.copy(alpha = 0.95f)
+            containerColor = Color(0xFF1F1F1F)
         ),
         border = BorderStroke(cardBorderWidth, cardBorderColor)
     ) {
@@ -138,24 +102,39 @@ fun PersonaCard(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ═══ Persona Name ═══
-                Text(
-                    text = persona.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().padding(end = 36.dp) // Space for menu button
-                )
+                // ═══ Persona Name with Active Indicator ═══
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(end = 36.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = persona.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFFD4AF37),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Subtle active indicator dot
+                    if (isActive) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFE6B84A))
+                        )
+                    }
+                }
 
                 // ═══ Bio/Summary (3 lines with fade) ═══
                 Text(
                     text = persona.summary,
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 14.sp,
-                    color = InnovexiaTheme.colors.personaMutedText.copy(alpha = 0.95f),
+                    color = Color(0xFFA89968),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 18.sp,
@@ -177,14 +156,14 @@ fun PersonaCard(
                             text = "Created",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 11.sp,
-                            color = InnovexiaTheme.colors.personaMutedText.copy(alpha = 0.7f)
+                            color = Color(0xFF94A3B8)
                         )
                         Text(
                             text = persona.createdAtFormatted.ifEmpty { "Recently" },
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = InnovexiaTheme.colors.personaMutedText
+                            color = Color(0xFFA89968)
                         )
                     }
 
@@ -197,7 +176,7 @@ fun PersonaCard(
                             text = "Last used",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 11.sp,
-                            color = InnovexiaTheme.colors.personaMutedText.copy(alpha = 0.7f)
+                            color = Color(0xFF94A3B8)
                         )
                         Text(
                             text = persona.lastUsedFormatted ?: "Never",
@@ -205,9 +184,9 @@ fun PersonaCard(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (persona.lastUsedFormatted != null) {
-                                InnovexiaTheme.colors.goldDim.copy(alpha = 0.9f)
+                                Color(0xFFE6B84A)
                             } else {
-                                InnovexiaTheme.colors.personaMutedText
+                                Color(0xFFA89968)
                             }
                         )
                     }
@@ -225,7 +204,7 @@ fun PersonaCard(
                         persona.tags.take(3).forEach { tag ->
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFF1E293B),
+                                color = Color(0xFF2A2A2A),
                                 contentColor = Color(0xFF94A3B8)
                             ) {
                                 Text(
@@ -239,7 +218,7 @@ fun PersonaCard(
                         if (persona.tags.size > 3) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFF1E293B).copy(alpha = 0.5f),
+                                color = Color(0xFF2A2A2A).copy(alpha = 0.7f),
                                 contentColor = Color(0xFF94A3B8)
                             ) {
                                 Text(
@@ -253,16 +232,16 @@ fun PersonaCard(
                     }
                 }
 
-                // ═══ Action Row: Select/Import + Star ═══
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(36.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Select/Import button
-                    if (showImport && onImport != null) {
+                // ═══ Action Row: Active/Select + Turn Off (if active) + Star ═══
+                if (showImport && onImport != null) {
+                    // Import button for public personas
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Button(
                             onClick = { onImport(persona) },
                             modifier = Modifier.weight(1f).height(36.dp),
@@ -274,35 +253,117 @@ fun PersonaCard(
                         ) {
                             Text("Import", style = MaterialTheme.typography.labelMedium, fontSize = 13.sp)
                         }
-                    } else {
-                        Button(
+
+                        // Star icon button
+                        IconButton(
+                            onClick = { onStar(persona) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (persona.starred) Icons.Filled.Star else Icons.Outlined.Star,
+                                contentDescription = if (persona.starred) "Unstar ${persona.name}" else "Star ${persona.name}",
+                                tint = if (persona.starred) Color(0xFFE6B84A) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                } else if (isActive) {
+                    // Active persona: Show status chip and Turn Off button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Active status chip (not clickable)
+                        Surface(
+                            modifier = Modifier.height(36.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            color = Color(0xFF2A2A2A).copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, Color(0xFFE6B84A).copy(alpha = 0.3f))
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color(0xFFE6B84A).copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+
+                        // Turn Off button
+                        OutlinedButton(
                             onClick = { onSelect(persona) },
                             modifier = Modifier.weight(1f).height(36.dp),
                             shape = RoundedCornerShape(18.dp),
-                            colors = if (isActive) {
-                                ButtonDefaults.buttonColors(
-                                    containerColor = InnovexiaTheme.colors.goldDim,
-                                    contentColor = InnovexiaTheme.colors.onGold
-                                )
-                            } else {
-                                ButtonDefaults.buttonColors()
-                            }
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFA89968)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF404040).copy(alpha = 0.5f))
                         ) {
-                            Text("Select", style = MaterialTheme.typography.labelMedium, fontSize = 13.sp)
+                            Text(
+                                text = "Turn Off",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+
+                        // Star icon button
+                        IconButton(
+                            onClick = { onStar(persona) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (persona.starred) Icons.Filled.Star else Icons.Outlined.Star,
+                                contentDescription = if (persona.starred) "Unstar ${persona.name}" else "Star ${persona.name}",
+                                tint = if (persona.starred) Color(0xFFE6B84A) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     }
-
-                    // Star icon button
-                    IconButton(
-                        onClick = { onStar(persona) },
-                        modifier = Modifier.size(36.dp)
+                } else {
+                    // Inactive persona: Show Select button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = if (persona.starred) Icons.Filled.Star else Icons.Outlined.Star,
-                            contentDescription = if (persona.starred) "Unstar ${persona.name}" else "Star ${persona.name}",
-                            tint = if (persona.starred) InnovexiaTheme.colors.goldDim else InnovexiaTheme.colors.personaMutedText,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        OutlinedButton(
+                            onClick = { onSelect(persona) },
+                            modifier = Modifier.weight(1f).height(36.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFD4AF37)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF404040).copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = "Select",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+
+                        // Star icon button
+                        IconButton(
+                            onClick = { onStar(persona) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (persona.starred) Icons.Filled.Star else Icons.Outlined.Star,
+                                contentDescription = if (persona.starred) "Unstar ${persona.name}" else "Star ${persona.name}",
+                                tint = if (persona.starred) Color(0xFFE6B84A) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -320,52 +381,173 @@ fun PersonaCard(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "More options for ${persona.name}",
-                        tint = InnovexiaTheme.colors.personaMutedText,
+                        tint = Color(0xFF94A3B8),
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 DropdownMenu(
                     expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
+                    onDismissRequest = { menuExpanded = false },
+                    modifier = Modifier
+                        .background(
+                            color = Color(0xFF1E2329),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xFF404040).copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
                 ) {
+                    // Turn Off option (only for active personas)
+                    android.util.Log.d("PersonaCard", "Menu expanded - persona=${persona.name}, isActive=$isActive")
+                    if (isActive) {
+                        android.util.Log.d("PersonaCard", "Showing Turn Off menu item for ${persona.name}")
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Turn Off",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            },
+                            onClick = {
+                                android.util.Log.d("PersonaCard", "Turn Off clicked for ${persona.name}")
+                                menuExpanded = false
+                                onSelect(persona)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.PowerSettingsNew,
+                                    contentDescription = null,
+                                    tint = Color(0xFFA89968),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            color = Color(0xFF404040).copy(alpha = 0.3f)
+                        )
+                    }
+
                     if (onEdit != null) {
                         DropdownMenuItem(
-                            text = { Text("Edit") },
+                            text = {
+                                Text(
+                                    "Edit",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            },
                             onClick = {
                                 menuExpanded = false
                                 onEdit(persona)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = Color(0xFFA89968),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Rename") },
+                        text = {
+                            Text(
+                                "Rename",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
                         onClick = {
                             menuExpanded = false
                             onRename(persona)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.DriveFileRenameOutline,
+                                contentDescription = null,
+                                tint = Color(0xFFA89968),
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Duplicate") },
+                        text = {
+                            Text(
+                                "Duplicate",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
                         onClick = {
                             menuExpanded = false
                             onDuplicate(persona)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                tint = Color(0xFFA89968),
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     )
                     if (!showImport && onMakePublic != null) {
                         DropdownMenuItem(
-                            text = { Text("Make Public") },
+                            text = {
+                                Text(
+                                    "Make Public",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            },
                             onClick = {
                                 menuExpanded = false
                                 showPublicDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Public,
+                                    contentDescription = null,
+                                    tint = Color(0xFFA89968),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         )
                     }
-                    HorizontalDivider()
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = Color(0xFF404040).copy(alpha = 0.3f)
+                    )
                     DropdownMenuItem(
-                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        text = {
+                            Text(
+                                "Delete",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
                         onClick = {
                             menuExpanded = false
                             showDeleteDialog = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     )
                 }

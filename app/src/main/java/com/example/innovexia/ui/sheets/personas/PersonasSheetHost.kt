@@ -2,6 +2,7 @@ package com.example.innovexia.ui.sheets.personas
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -35,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
@@ -42,6 +44,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -119,21 +122,39 @@ fun PersonasDialog(
                 usePlatformDefaultWidth = false
             )
         ) {
-            // Outer surface (rounded card) - matches chat page background
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (darkTheme) InnovexiaColors.DarkBackground else InnovexiaColors.LightBackground,
-                tonalElevation = 0.dp,
-                border = BorderStroke(
-                    1.dp,
-                    if (darkTheme) InnovexiaColors.DarkBorder.copy(alpha = 0.6f) else InnovexiaColors.LightBorder.copy(alpha = 0.6f)
-                ),
+            // Outer surface (rounded card) - matches side menu Material 3 design with gradient
+            Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 24.dp)
                     .fillMaxWidth()
                     .fillMaxHeight(0.88f) // Bounded height
                     .imePadding()
                     .navigationBarsPadding()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        if (darkTheme) {
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    InnovexiaColors.DarkGradientStart,
+                                    InnovexiaColors.DarkGradientMid,
+                                    InnovexiaColors.DarkGradientEnd
+                                )
+                            )
+                        } else {
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    InnovexiaColors.LightGradientStart,
+                                    InnovexiaColors.LightGradientMid,
+                                    InnovexiaColors.LightGradientEnd
+                                )
+                            )
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (darkTheme) Color(0xFF404040).copy(alpha = 0.5f) else InnovexiaColors.LightBorder.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(24.dp)
+                    )
             ) {
                 // Layout: header + search + tabs fixed; body scrolls
                 Column(
@@ -154,7 +175,7 @@ fun PersonasDialog(
                     ) {
                         Text(
                             "Personas",
-                            color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
+                            color = if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.3).sp
@@ -169,55 +190,22 @@ fun PersonasDialog(
                             Icon(
                                 Icons.Rounded.Close,
                                 contentDescription = "Close",
-                                tint = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
+                                tint = if (darkTheme) Color(0xFFA89968) else LightColors.SecondaryText,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                    // ---- Search + New Button Row ----
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SearchField(
-                            value = query,
-                            onValueChange = { query = it },
-                            darkTheme = darkTheme,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        // New Persona Button
-                        Surface(
-                            onClick = { showCreateDialog = true },
-                            modifier = Modifier.height(40.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Create new persona",
-                                    tint = if (darkTheme) InnovexiaColors.OnGold else Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "New",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (darkTheme) InnovexiaColors.OnGold else Color.White
-                                )
-                            }
-                        }
-                    }
+                    // ---- Search + New Button Row (Integrated like side menu) ----
+                    SearchBarWithNewButton(
+                        value = query,
+                        onValueChange = { query = it },
+                        onNewClick = { showCreateDialog = true },
+                        darkTheme = darkTheme,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     Spacer(Modifier.height(6.dp))
 
@@ -230,7 +218,7 @@ fun PersonasDialog(
 
                     HorizontalDivider(
                         Modifier.padding(top = 6.dp, bottom = 6.dp),
-                        color = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.2f)
+                        color = if (darkTheme) Color(0xFF3A3A3A)
                         else LightColors.SecondaryText.copy(alpha = 0.2f)
                     )
 
@@ -243,10 +231,17 @@ fun PersonasDialog(
                                 selectedPersonaId = activePersonaId,
                                 isSignedIn = viewModel.isSignedIn,
                                 onPersonaSelected = { persona ->
-                                    viewModel.setActivePersona(persona.id)
-                                    onPersonaSelected(persona)
+                                    // Toggle: if clicking active persona, deselect it (turn off)
+                                    if (persona.id == activePersonaId) {
+                                        viewModel.setActivePersona(null) // Turn off persona
+                                        // Note: Don't call onPersonaSelected when turning off
+                                        // The HomeScreen will observe the activePersonaId change
+                                    } else {
+                                        viewModel.setActivePersona(persona.id)
+                                        onPersonaSelected(persona)
+                                    }
                                     focusManager.clearFocus()
-                                    onDismiss()
+                                    // Don't auto-close - let user close manually
                                 },
                                 onNewPersona = { showCreateDialog = true },
                                 onStar = { persona ->
@@ -279,18 +274,17 @@ fun PersonasDialog(
                             )
 
                             PersonaTab.Sources -> {
-                                // Sources tab - Full backend integration with PDF support
+                                // Sources tab - Simplified with tab-specific search
                                 val selectedPersona = myPersonas.find { it.id == activePersonaId }
                                     ?: myPersonas.firstOrNull()
-
-                                android.util.Log.d("PersonasSheetHost", "Sources tab - activePersonaId: $activePersonaId, selectedPersona: ${selectedPersona?.id} (${selectedPersona?.name})")
 
                                 if (selectedPersona != null) {
                                     com.example.innovexia.ui.persona.sources.SourcesTabWithBackend(
                                         personaId = selectedPersona.id,
                                         personaName = selectedPersona.name,
                                         personaColor = Color(selectedPersona.color),
-                                        darkTheme = darkTheme
+                                        darkTheme = darkTheme,
+                                        searchQuery = query // Tab-specific search
                                     )
                                 } else {
                                     Box(
@@ -307,14 +301,15 @@ fun PersonasDialog(
                             }
 
                             PersonaTab.Memory -> {
-                                // Memory tab - Backend connected
+                                // Memory tab - Backend connected with search
                                 val selectedPersona = myPersonas.find { it.id == activePersonaId }
                                     ?: myPersonas.firstOrNull()
 
                                 if (selectedPersona != null) {
                                     com.example.innovexia.ui.persona.memory.MemoryTabConnected(
                                         persona = selectedPersona,
-                                        darkTheme = darkTheme
+                                        darkTheme = darkTheme,
+                                        searchQuery = query // Pass top search bar query
                                     )
                                 } else {
                                     Box(
@@ -368,7 +363,7 @@ fun PersonasDialog(
 }
 
 /**
- * Modern tabs row with enhanced styling
+ * Material 3 tabs row - compact and properly scaled
  */
 @Composable
 private fun PersonasTabs(
@@ -382,13 +377,14 @@ private fun PersonasTabs(
         selectedTabIndex = tabs.indexOf(selected).coerceAtLeast(0),
         edgePadding = 0.dp,
         containerColor = Color.Transparent,
+        contentColor = if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText,
         indicator = { tabPositions ->
             val idx = tabs.indexOf(selected)
             if (idx >= 0) {
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[idx]),
-                    color = if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold,
-                    height = 3.dp
+                    color = if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold,
+                    height = 2.dp
                 )
             }
         },
@@ -400,103 +396,134 @@ private fun PersonasTabs(
                 onClick = { onSelect(tab) },
                 text = {
                     Text(
-                        when (tab) {
-                            PersonaTab.My -> "My Personas"
+                        text = when (tab) {
+                            PersonaTab.My -> "Personas"
                             PersonaTab.Public -> "Public"
                             PersonaTab.Sources -> "Sources"
                             PersonaTab.Memory -> "Memory"
                         },
                         color = if (tab == selected) {
-                            if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText
+                            if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText
                         } else {
-                            if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.8f)
+                            if (darkTheme) Color(0xFFA89968).copy(alpha = 0.8f)
                             else LightColors.SecondaryText.copy(alpha = 0.7f)
                         },
-                        fontWeight = if (tab == selected) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = if (tab == selected) 14.sp else 13.sp
+                        fontWeight = if (tab == selected) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelLarge
                     )
                 },
-                modifier = Modifier.height(40.dp)
+                modifier = Modifier
+                    .height(48.dp)
+                    .widthIn(min = 80.dp)
             )
         }
     }
 }
 
 /**
- * Search field component
+ * Integrated search bar with New button embedded inside (like side menu design)
  */
 @Composable
-private fun SearchField(
+private fun SearchBarWithNewButton(
     value: String,
     onValueChange: (String) -> Unit,
+    onNewClick: () -> Unit,
     darkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val searchBg = if (darkTheme) Color(0xFF1E2530) else Color(0xFFF5F7FA)
-    val searchBorder = if (darkTheme) Color(0xFF2A3441).copy(alpha = 0.5f) else Color(0xFFE0E5EB).copy(alpha = 0.7f)
+    val searchBg = if (darkTheme) Color(0xFF1E2329) else Color(0xFFF5F7FA)
+    val searchBorder = if (darkTheme) Color(0xFF2A323B).copy(alpha = 0.6f) else Color(0xFFE0E5EB).copy(alpha = 0.7f)
 
     Surface(
-        modifier = modifier.height(40.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.height(42.dp),
+        shape = RoundedCornerShape(21.dp),
         color = searchBg,
         border = BorderStroke(1.dp, searchBorder),
         shadowElevation = if (value.isNotEmpty()) 1.dp else 0.dp
     ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .semantics { contentDescription = "Search personas" },
-            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
-                fontSize = 14.sp
-            ),
-            cursorBrush = SolidColor(if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold),
-            singleLine = true,
-            decorationBox = @Composable { innerTextField ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.8f)
-                               else LightColors.SecondaryText.copy(alpha = 0.7f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
+                .padding(start = 14.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Search icon
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = if (darkTheme) Color(0xFFA89968).copy(alpha = 0.8f)
+                       else LightColors.SecondaryText.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+            )
+
+            // Text field
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = "Search personas" },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = if (darkTheme) Color(0xFFD4AF37) else LightColors.PrimaryText,
+                    fontSize = 14.sp
+                ),
+                cursorBrush = SolidColor(if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold),
+                singleLine = true,
+                decorationBox = @Composable { innerTextField ->
+                    Box {
                         if (value.isEmpty()) {
                             Text(
                                 text = "Search...",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontSize = 14.sp,
-                                color = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.7f)
+                                color = if (darkTheme) Color(0xFFA89968).copy(alpha = 0.7f)
                                        else LightColors.SecondaryText.copy(alpha = 0.6f)
                             )
                         }
                         innerTextField()
                     }
-                    if (value.isNotEmpty()) {
-                        IconButton(
-                            onClick = { onValueChange("") },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear search",
-                                tint = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
+                }
+            )
+
+            // Clear button (when text is present)
+            if (value.isNotEmpty()) {
+                IconButton(
+                    onClick = { onValueChange("") },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Clear search",
+                        tint = if (darkTheme) Color(0xFFA89968) else LightColors.SecondaryText,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
-        )
+
+            // New button (embedded inside search bar)
+            Surface(
+                onClick = onNewClick,
+                modifier = Modifier.size(30.dp),
+                shape = RoundedCornerShape(15.dp),
+                color = if (darkTheme) Color(0xFFE6B84A).copy(alpha = 0.15f) else InnovexiaColors.Gold.copy(alpha = 0.15f)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create new persona",
+                        tint = if (darkTheme) Color(0xFFE6B84A) else InnovexiaColors.Gold,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
     }
 }
 

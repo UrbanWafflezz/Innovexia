@@ -2,6 +2,7 @@ package com.example.innovexia.ui.persona.sources
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,7 +29,7 @@ import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.ui.theme.LightColors
 
 /**
- * Filters bar with chips, search, sort, and select toggle
+ * Filters bar with chips - Simplified Material 3 design
  */
 @Composable
 fun SourcesFilters(
@@ -41,16 +42,17 @@ fun SourcesFilters(
     onSortChange: (String) -> Unit,
     onToggleSelect: () -> Unit,
     darkTheme: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hideSearchAndControls: Boolean = false // Hide search, Recent, Select
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Type filter chips
+        // Type filter chips - Centered horizontally
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
         ) {
             FilterChip(
                 label = "All",
@@ -78,51 +80,53 @@ fun SourcesFilters(
             )
         }
 
-        // Search + Sort + Select
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Search field
-            SearchField(
-                value = query,
-                onValueChange = onQueryChange,
-                darkTheme = darkTheme,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Sort dropdown
-            SortDropdown(
-                currentSort = sort,
-                onSortChange = onSortChange,
-                darkTheme = darkTheme
-            )
-
-            // Select toggle
-            TextButton(
-                onClick = onToggleSelect,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = if (selecting) {
-                        if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold
-                    } else {
-                        if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
-                    }
-                )
+        // Only show search + sort + select if not hidden
+        if (!hideSearchAndControls) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Select",
-                    fontSize = 14.sp,
-                    fontWeight = if (selecting) FontWeight.SemiBold else FontWeight.Medium
+                // Search field
+                SearchField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    darkTheme = darkTheme,
+                    modifier = Modifier.weight(1f)
                 )
+
+                // Sort dropdown
+                SortDropdown(
+                    currentSort = sort,
+                    onSortChange = onSortChange,
+                    darkTheme = darkTheme
+                )
+
+                // Select toggle
+                TextButton(
+                    onClick = onToggleSelect,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (selecting) {
+                            if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold
+                        } else {
+                            if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
+                        }
+                    )
+                ) {
+                    Text(
+                        text = "Select",
+                        fontSize = 14.sp,
+                        fontWeight = if (selecting) FontWeight.SemiBold else FontWeight.Medium
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * Filter chip with animation
+ * Filter chip with Material 3 design
  */
 @Composable
 private fun FilterChip(
@@ -134,43 +138,42 @@ private fun FilterChip(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) {
-            if (darkTheme) InnovexiaColors.GoldDim.copy(alpha = 0.2f) else InnovexiaColors.Gold.copy(alpha = 0.2f)
+            Color(0xFFE6B84A).copy(alpha = 0.2f)
         } else {
-            if (darkTheme) Color(0xFF1E2530) else Color(0xFFF5F5F5)
+            Color(0xFF2A2A2A).copy(alpha = 0.6f)
         },
         label = "chip_bg"
     )
 
     val textColor by animateColorAsState(
         targetValue = if (selected) {
-            if (darkTheme) InnovexiaColors.GoldDim else InnovexiaColors.Gold
+            Color(0xFFE6B84A)
         } else {
-            if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
+            Color(0xFF94A3B8)
         },
         label = "chip_text"
     )
 
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1f else 0.98f,
-        label = "chip_scale"
-    )
-
-    Box(
-        modifier = modifier
-            .height(36.dp)
-            .scale(scale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(32.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        border = if (selected) BorderStroke(1.dp, Color(0xFFE6B84A).copy(alpha = 0.6f)) else null
     ) {
-        Text(
-            text = label,
-            color = textColor,
-            fontSize = 14.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 12.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = textColor
+            )
+        }
     }
 }
 

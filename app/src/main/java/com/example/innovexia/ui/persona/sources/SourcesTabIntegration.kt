@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Sources tab with real PDF backend integration
+ * Sources tab with real PDF backend integration - Simplified Material 3 design
  */
 @Composable
 fun SourcesTabWithBackend(
@@ -22,7 +22,8 @@ fun SourcesTabWithBackend(
     personaName: String,
     personaColor: Color,
     darkTheme: Boolean = isSystemInDarkTheme(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    searchQuery: String = "" // Tab-specific search from main search bar
 ) {
     val context = LocalContext.current
 
@@ -35,6 +36,11 @@ fun SourcesTabWithBackend(
     val filterState by viewModel.filterState.collectAsState()
     val storageUsed by viewModel.storageUsed.collectAsState()
     val filteredItems by viewModel.getFilteredItems().collectAsState()
+
+    // Update query from main search bar
+    LaunchedEffect(searchQuery) {
+        viewModel.updateQuery(searchQuery)
+    }
 
     // File picker launcher
     val pdfPicker = rememberLauncherForActivityResult(
@@ -69,182 +75,164 @@ fun SourcesTabWithBackend(
     // Dialog states
     var detailsItem by remember { mutableStateOf<SourceItemUi?>(null) }
     var removeConfirmIds by remember { mutableStateOf<Set<String>?>(null) }
-    var enabled by remember { mutableStateOf(true) }
 
     Column(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Header
-        SourcesHeader(
-            personaName = personaName,
-            personaColor = personaColor,
-            enabled = enabled,
-            onEnabledChange = { enabled = it },
+        // Action buttons - URL, File, Image (at top)
+        SourceAddBar(
+            onAddUrl = { url ->
+                // Add URL source (real backend)
+                viewModel.addUrl(url) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(context, "URL added - indexing started", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Error: ${result.exceptionOrNull()?.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            },
+            onAddFile = {
+                // Launch PDF picker
+                pdfPicker.launch(arrayOf("application/pdf"))
+            },
+            onAddImage = {
+                // TODO: Image support in future phase
+                Toast.makeText(context, "Image support coming soon", Toast.LENGTH_SHORT).show()
+            },
             darkTheme = darkTheme
         )
 
-        if (enabled) {
-            // Add bar
-            SourceAddBar(
-                onAddUrl = { url ->
-                    // Add URL source (real backend)
-                    viewModel.addUrl(url) { result ->
-                        if (result.isSuccess) {
-                            Toast.makeText(context, "URL added - indexing started", Toast.LENGTH_SHORT).show()
-                        } else {
+        // Filter chips - All, URLs, Files, Images (below action buttons)
+        SourcesFilters(
+            filter = filterState.filter,
+            query = filterState.query,
+            sort = filterState.sort,
+            selecting = filterState.selecting,
+            onFilterChange = { viewModel.applyFilter(it) },
+            onQueryChange = { viewModel.updateQuery(it) },
+            onSortChange = { viewModel.applySort(it) },
+            onToggleSelect = { viewModel.toggleSelectMode() },
+            darkTheme = darkTheme,
+            hideSearchAndControls = true // Hide search sources, Recent, Select
+        )
+
+        // Content
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            when {
+                filteredItems.isEmpty() && filterState.query.isBlank() && filterState.filter == null -> {
+                    EmptyState(
+                        type = EmptyStateType.NO_ITEMS,
+                        onAddFile = { pdfPicker.launch(arrayOf("application/pdf")) },
+                        darkTheme = darkTheme
+                    )
+                }
+                filteredItems.isEmpty() && filterState.filter != null && filterState.query.isBlank() -> {
+                    val emptyType = when (filterState.filter) {
+                        SourceType.FILE -> EmptyStateType.FILTER_EMPTY_FILES
+                        else -> EmptyStateType.NO_ITEMS
+                    }
+                    EmptyState(
+                        type = emptyType,
+                        onAddFile = { pdfPicker.launch(arrayOf("application/pdf")) },
+                        darkTheme = darkTheme
+                    )
+                }
+                filteredItems.isEmpty() && filterState.query.isNotBlank() -> {
+                    EmptyState(
+                        type = EmptyStateType.SEARCH_EMPTY(filterState.query),
+                        darkTheme = darkTheme
+                    )
+                }
+                else -> {
+                    SourceList(
+                        items = filteredItems,
+                        selectedIds = filterState.selectedIds,
+                        selecting = filterState.selecting,
+                        onItemClick = { item ->
+                            if (filterState.selecting) {
+                                viewModel.toggleItemSelection(item.id)
+                            } else {
+                                detailsItem = item
+                            }
+                        },
+                        onItemLongPress = { item ->
+                            if (!filterState.selecting) {
+                                viewModel.toggleSelectMode()
+                            }
+                            viewModel.toggleItemSelection(item.id)
+                        },
+                        onTogglePin = { id ->
+                            // TODO: Pin support
+                        },
+                        onReindex = { id ->
+                            viewModel.reindex(id) { result ->
+                                val msg = if (result.isSuccess) {
+                                    "Reindexing started"
+                                } else {
+                                    "Error: ${result.exceptionOrNull()?.message}"
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onRemove = { id ->
+                            removeConfirmIds = setOf(id)
+                        },
+                        onOpenDetails = { item ->
+                            detailsItem = item
+                        },
+                        darkTheme = darkTheme
+                    )
+                }
+            }
+
+            // Batch action bar
+            if (filterState.selecting && filterState.selectedIds.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 0.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    BatchActionBar(
+                        selectedCount = filterState.selectedIds.size,
+                        onPin = { /* TODO */ },
+                        onUnpin = { /* TODO */ },
+                        onReindex = {
+                            filterState.selectedIds.forEach { id ->
+                                viewModel.reindex(id) { }
+                            }
                             Toast.makeText(
                                 context,
-                                "Error: ${result.exceptionOrNull()?.message}",
-                                Toast.LENGTH_LONG
+                                "Reindexing ${filterState.selectedIds.size} items...",
+                                Toast.LENGTH_SHORT
                             ).show()
-                        }
-                    }
-                },
-                onAddFile = {
-                    // Launch PDF picker
-                    pdfPicker.launch(arrayOf("application/pdf"))
-                },
-                onAddImage = {
-                    // TODO: Image support in future phase
-                    Toast.makeText(context, "Image support coming soon", Toast.LENGTH_SHORT).show()
-                },
-                darkTheme = darkTheme
-            )
-
-            // Filters
-            SourcesFilters(
-                filter = filterState.filter,
-                query = filterState.query,
-                sort = filterState.sort,
-                selecting = filterState.selecting,
-                onFilterChange = { viewModel.applyFilter(it) },
-                onQueryChange = { viewModel.updateQuery(it) },
-                onSortChange = { viewModel.applySort(it) },
-                onToggleSelect = { viewModel.toggleSelectMode() },
-                darkTheme = darkTheme
-            )
-
-            // Content
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                when {
-                    filteredItems.isEmpty() && filterState.query.isBlank() && filterState.filter == null -> {
-                        EmptyState(
-                            type = EmptyStateType.NO_ITEMS,
-                            onAddFile = { pdfPicker.launch(arrayOf("application/pdf")) },
-                            darkTheme = darkTheme
-                        )
-                    }
-                    filteredItems.isEmpty() && filterState.filter != null && filterState.query.isBlank() -> {
-                        val emptyType = when (filterState.filter) {
-                            SourceType.FILE -> EmptyStateType.FILTER_EMPTY_FILES
-                            else -> EmptyStateType.NO_ITEMS
-                        }
-                        EmptyState(
-                            type = emptyType,
-                            onAddFile = { pdfPicker.launch(arrayOf("application/pdf")) },
-                            darkTheme = darkTheme
-                        )
-                    }
-                    filteredItems.isEmpty() && filterState.query.isNotBlank() -> {
-                        EmptyState(
-                            type = EmptyStateType.SEARCH_EMPTY(filterState.query),
-                            darkTheme = darkTheme
-                        )
-                    }
-                    else -> {
-                        SourceList(
-                            items = filteredItems,
-                            selectedIds = filterState.selectedIds,
-                            selecting = filterState.selecting,
-                            onItemClick = { item ->
-                                if (filterState.selecting) {
-                                    viewModel.toggleItemSelection(item.id)
-                                } else {
-                                    detailsItem = item
-                                }
-                            },
-                            onItemLongPress = { item ->
-                                if (!filterState.selecting) {
-                                    viewModel.toggleSelectMode()
-                                }
-                                viewModel.toggleItemSelection(item.id)
-                            },
-                            onTogglePin = { id ->
-                                // TODO: Pin support
-                            },
-                            onReindex = { id ->
-                                viewModel.reindex(id) { result ->
-                                    val msg = if (result.isSuccess) {
-                                        "Reindexing started"
-                                    } else {
-                                        "Error: ${result.exceptionOrNull()?.message}"
-                                    }
-                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onRemove = { id ->
-                                removeConfirmIds = setOf(id)
-                            },
-                            onOpenDetails = { item ->
-                                detailsItem = item
-                            },
-                            darkTheme = darkTheme
-                        )
-                    }
-                }
-
-                // Batch action bar
-                if (filterState.selecting && filterState.selectedIds.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 0.dp),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        BatchActionBar(
-                            selectedCount = filterState.selectedIds.size,
-                            onPin = { /* TODO */ },
-                            onUnpin = { /* TODO */ },
-                            onReindex = {
-                                filterState.selectedIds.forEach { id ->
-                                    viewModel.reindex(id) { }
-                                }
-                                Toast.makeText(
-                                    context,
-                                    "Reindexing ${filterState.selectedIds.size} items...",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-                            onRemove = {
-                                removeConfirmIds = filterState.selectedIds
-                            },
-                            onClearSelection = {
-                                viewModel.clearSelection()
-                            },
-                            darkTheme = darkTheme
-                        )
-                    }
+                        },
+                        onRemove = {
+                            removeConfirmIds = filterState.selectedIds
+                        },
+                        onClearSelection = {
+                            viewModel.clearSelection()
+                        },
+                        darkTheme = darkTheme
+                    )
                 }
             }
+        }
 
-            // Footer
-            if (filteredItems.isNotEmpty() && !filterState.selecting) {
-                SourcesFooter(
-                    storageUsedBytes = storageUsed,
-                    darkTheme = darkTheme
-                )
-            }
-        } else {
-            EmptyState(
-                type = EmptyStateType.DISABLED,
-                onEnableSources = { enabled = true },
-                darkTheme = darkTheme,
-                modifier = Modifier.weight(1f)
+        // Footer
+        if (filteredItems.isNotEmpty() && !filterState.selecting) {
+            SourcesFooter(
+                storageUsedBytes = storageUsed,
+                darkTheme = darkTheme
             )
         }
     }
