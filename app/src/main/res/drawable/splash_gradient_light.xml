@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Beautiful gradient background for light mode -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#BFE8FF"
+                android:centerColor="#EAF6FF"
+                android:endColor="#FFFFFF"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- Subtle overlay for depth -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="45"
+                android:startColor="#1A3B82F6"
+                android:centerColor="#00FFFFFF"
+                android:endColor="#1AF2C94C"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- App icon centered -->
+    <item
+        android:drawable="@mipmap/ic_launcher"
+        android:gravity="center"
+        android:width="120dp"
+        android:height="120dp"/>
+
+    <!-- "By Innovexia" branding at bottom -->
+    <item
+        android:drawable="@drawable/innovexia_branding_light"
+        android:gravity="bottom|center_horizontal"
+        android:bottom="40dp"
+        android:width="200dp"
+        android:height="30dp"/>
+</layer-list>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple "Innovexia" text representation -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <size android:width="100dp" android:height="16dp"/>
+    <solid android:color="#00000000"/>
+</shape>

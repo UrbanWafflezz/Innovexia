@@ -25,9 +25,14 @@ import com.example.innovexia.subscriptions.mock.UsageState
 import kotlinx.coroutines.delay
 
 /**
- * Rate limit countdown composer
- * Replaces the normal composer when rate limit is hit
- * Shows real-time countdown until reset
+ * Rate limit countdown composer - Material 3 Design
+ *
+ * Material 3 Features:
+ * - M3 color scheme with warning color
+ * - Enhanced pulsing clock icon with color shift
+ * - Animated countdown with flip transitions
+ * - M3 elevated button for upgrade
+ * - Smooth entrance animation
  */
 @Composable
 fun RateLimitComposer(
@@ -36,14 +41,7 @@ fun RateLimitComposer(
     modifier: Modifier = Modifier,
     isGuest: Boolean = false
 ) {
-    val isDark = isSystemInDarkTheme()
-    val containerColor = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF5F5F7)
-    val borderColor = if (isDark) Color(0xFF38383A) else Color(0xFFE0E0E2)
-    val textColor = if (isDark) Color(0xFFE5E5E7) else Color(0xFF1C1C1E)
-    val accentColor = if (isDark) Color(0xFFE8A84D) else Color(0xFFD89438) // Muted gold
-    val subtleColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF6C6C70)
-    val buttonBg = if (isDark) Color(0xFF2C2C2E) else Color(0xFFE8E8EA)
-    val buttonText = if (isDark) Color(0xFFE8A84D) else Color(0xFFD89438)
+    val colorScheme = MaterialTheme.colorScheme
 
     // Real-time countdown
     var timeRemaining by remember { mutableStateOf(usageState.timeUntilReset) }
@@ -66,27 +64,44 @@ fun RateLimitComposer(
         }
     }
 
-    // Pulsing animation for the clock icon
+    // Pulsing animation for the clock icon with color shift
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.1f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(
+                durationMillis = 1200,
+                easing = FastOutSlowInEasing
+            ),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseScale"
+    )
+
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1200,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
     )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .height(ComposerTokens.Dimen.Height)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         shape = RoundedCornerShape(ComposerTokens.Dimen.Radius),
-        color = containerColor,
-        border = BorderStroke(1.dp, borderColor),
-        tonalElevation = 0.dp
+        color = Color(0xFF1E2329), // Dark surface matching theme
+        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f)), // Red error border
+        tonalElevation = 2.dp,
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -95,23 +110,23 @@ fun RateLimitComposer(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left side: Icon + Message info
+            // Left side: Animated icon + Message info
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Pulsing clock icon
+                // Enhanced pulsing clock icon with color shift
                 Icon(
                     imageVector = Icons.Rounded.Schedule,
                     contentDescription = "Rate limit",
-                    tint = accentColor,
+                    tint = Color(0xFFEF4444), // Red error color
                     modifier = Modifier
-                        .size(28.dp)
-                        .alpha(0.9f)
+                        .size(32.dp)
                         .graphicsLayer {
                             scaleX = pulseScale
                             scaleY = pulseScale
+                            alpha = pulseAlpha
                         }
                 )
 
@@ -120,45 +135,97 @@ fun RateLimitComposer(
                 ) {
                     Text(
                         text = "Rate limit reached",
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = textColor
+                        color = Color(0xFFE5EAF0) // Light text
                     )
-                    Text(
-                        text = "Resets in $timeRemaining",
-                        fontSize = 13.sp,
-                        color = subtleColor,
-                        fontWeight = FontWeight.Normal
-                    )
+
+                    // Animated countdown with flip effect
+                    AnimatedContent(
+                        targetState = timeRemaining,
+                        transitionSpec = {
+                            (fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 200,
+                                    easing = LinearEasing
+                                )
+                            ) + slideInVertically(
+                                animationSpec = tween(200),
+                                initialOffsetY = { it / 2 }
+                            )).togetherWith(
+                                fadeOut(
+                                    animationSpec = tween(100)
+                                ) + slideOutVertically(
+                                    animationSpec = tween(100),
+                                    targetOffsetY = { -it / 2 }
+                                )
+                            )
+                        },
+                        label = "countdown_animation"
+                    ) { time ->
+                        Text(
+                            text = "Resets in $time",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF9AA6B2), // Muted text
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
                 }
             }
 
-            // Right side: Upgrade button (hidden for guest users)
-            if (!isGuest) {
-                Button(
+            // Right side: M3 Elevated button (hidden for guest users)
+            AnimatedVisibility(
+                visible = !isGuest,
+                enter = fadeIn(
+                    animationSpec = tween(
+                        durationMillis = ComposerTokens.Motion.DurationMedium,
+                        easing = ComposerTokens.Motion.EasingEnter
+                    )
+                ) + scaleIn(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ),
+                exit = fadeOut(
+                    animationSpec = tween(
+                        durationMillis = ComposerTokens.Motion.DurationShort,
+                        easing = ComposerTokens.Motion.EasingExit
+                    )
+                ) + scaleOut(
+                    animationSpec = tween(
+                        durationMillis = ComposerTokens.Motion.DurationShort,
+                        easing = ComposerTokens.Motion.EasingExit
+                    )
+                )
+            ) {
+                ElevatedButton(
                     onClick = onUpgrade,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = buttonBg,
-                        contentColor = buttonText
+                    colors = ButtonDefaults.elevatedButtonColors(
+                        containerColor = Color(0xFFF2C94C), // Gold accent
+                        contentColor = Color(0xFF0F0F0F) // Dark text on gold
                     ),
-                    shape = RoundedCornerShape(20.dp),
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                    elevation = ButtonDefaults.elevatedButtonElevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 4.dp
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     modifier = Modifier.heightIn(min = 44.dp)
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Upgrade,
                             contentDescription = "Upgrade",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Upgrade",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 18.sp
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }

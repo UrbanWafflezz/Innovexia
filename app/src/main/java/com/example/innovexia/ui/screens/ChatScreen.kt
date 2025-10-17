@@ -106,8 +106,8 @@ fun ChatScreen(
     // Check if user is guest (not logged in)
     val isGuest = remember { FirebaseAuth.getInstance().currentUser == null }
 
-    // Use MaterialTheme to respect user's theme preference
-    val chatBackground = MaterialTheme.colorScheme.background
+    // Match ChatHeader background exactly
+    val chatBackground = Color(0xFF171A1E)
 
     // Voice input manager (must be after context)
     val voiceInputManager = remember { VoiceInputManager(context) }

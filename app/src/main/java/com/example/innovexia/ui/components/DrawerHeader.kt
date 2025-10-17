@@ -1,7 +1,7 @@
 package com.example.innovexia.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,11 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.innovexia.R
-import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.ui.theme.InnovexiaDesign
 
 /**
- * Drawer header with Innovexia logo and glass-style "+ New" button
+ * Drawer header with Innovexia logo and Material 3 FilledTonalButton
  */
 @Composable
 fun DrawerHeader(
@@ -52,50 +54,26 @@ fun DrawerHeader(
         // App name
         Text(
             text = "Innovexia",
-            color = InnovexiaColors.DarkTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
         )
 
         Spacer(Modifier.weight(1f))
 
-        // Glass / matte "+ New" button
-        GlassButton(
-            text = "+ New",
-            onClick = onNewChat
-        )
-    }
-}
-
-/**
- * Glass-style button with frosted matte appearance
- */
-@Composable
-fun GlassButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val bg = InnovexiaColors.DarkSurfaceElevated.copy(alpha = 0.5f)
-    val borderColor = InnovexiaColors.DarkBorder.copy(alpha = 0.65f)
-
-    Surface(
-        modifier = modifier,
-        onClick = onClick,
-        shape = RoundedCornerShape(28.dp), // Capsule shape
-        color = bg,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        border = BorderStroke(1.dp, borderColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Material 3 FilledTonalButton for new chat
+        FilledTonalButton(
+            onClick = onNewChat,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
             Text(
-                text = text,
-                color = InnovexiaColors.DarkTextPrimary,
+                text = "New",
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp
             )

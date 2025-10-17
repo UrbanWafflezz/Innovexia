@@ -185,6 +185,13 @@ fun HomeScreen(
     // State management
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // Force drawer to properly close on initial composition
+    LaunchedEffect(Unit) {
+        if (drawerState.currentValue == DrawerValue.Closed) {
+            drawerState.snapTo(DrawerValue.Closed)
+        }
+    }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showProfile by rememberSaveable { mutableStateOf(false) }
     var showUsage by rememberSaveable { mutableStateOf(false) }

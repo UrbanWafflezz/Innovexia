@@ -150,6 +150,7 @@ object InnovexiaColors {
 
 /**
  * Extended color properties for InnovexiaTheme
+ * Maps custom brand colors to Material 3 design system
  */
 data class ExtendedColors(
     val goldDim: Color,
@@ -161,11 +162,25 @@ data class ExtendedColors(
     val searchBorder: Color,
     val coral: Color,
     val glassCyan: Color,
-    val glassPink: Color
+    val glassPink: Color,
+    // Material 3 Surface Containers
+    val surfaceContainer: Color,
+    val surfaceContainerLow: Color,
+    val surfaceContainerHigh: Color,
+    val surfaceContainerHighest: Color,
+    // Material 3 extended colors
+    val primaryFixed: Color,
+    val primaryFixedDim: Color,
+    val onPrimaryFixed: Color,
+    val secondaryContainer: Color,
+    val onSecondaryContainer: Color,
+    val tertiaryContainer: Color,
+    val onTertiaryContainer: Color
 )
 
 /**
  * Light mode extended colors
+ * Following Material 3 tonal surface system
  */
 val LightExtendedColors = ExtendedColors(
     goldDim = InnovexiaColors.Gold,
@@ -177,21 +192,48 @@ val LightExtendedColors = ExtendedColors(
     searchBorder = InnovexiaColors.LightBorder,
     coral = InnovexiaColors.CoralSend,
     glassCyan = InnovexiaColors.CyanAccent,
-    glassPink = InnovexiaColors.MagentaAccent
+    glassPink = InnovexiaColors.MagentaAccent,
+    // M3 Surface Containers (Light)
+    surfaceContainer = Color(0xFFF3F4F6),        // Slightly darker than surface
+    surfaceContainerLow = Color(0xFFFAFAFB),     // Between surface and background
+    surfaceContainerHigh = Color(0xFFEBECEE),    // More elevated than container
+    surfaceContainerHighest = Color(0xFFE5E7EB), // Highest elevation
+    // M3 Fixed colors
+    primaryFixed = InnovexiaColors.Gold.copy(alpha = 0.12f),
+    primaryFixedDim = InnovexiaColors.Gold.copy(alpha = 0.08f),
+    onPrimaryFixed = InnovexiaColors.LightTextPrimary,
+    secondaryContainer = InnovexiaColors.BlueAccent.copy(alpha = 0.12f),
+    onSecondaryContainer = InnovexiaColors.BlueBright,
+    tertiaryContainer = InnovexiaColors.TealAccent.copy(alpha = 0.12f),
+    onTertiaryContainer = InnovexiaColors.TealAccent
 )
 
 /**
  * Dark mode extended colors
+ * Following Material 3 tonal surface system
  */
 val DarkExtendedColors = ExtendedColors(
     goldDim = InnovexiaColors.GoldDim,
     onGold = InnovexiaColors.OnGold,
-    personaCardBg = InnovexiaColors.DarkSurface, // Keep cards slightly elevated from background
+    personaCardBg = InnovexiaColors.DarkSurface,
     personaCardBorder = InnovexiaColors.DarkBorder,
     personaMutedText = InnovexiaColors.DarkTextMuted,
-    searchBg = InnovexiaColors.DarkBackground, // Match chat background
+    searchBg = InnovexiaColors.DarkBackground,
     searchBorder = InnovexiaColors.DarkBorder,
     coral = InnovexiaColors.CoralSend,
     glassCyan = InnovexiaColors.CyanAccent,
-    glassPink = InnovexiaColors.MagentaAccent
+    glassPink = InnovexiaColors.MagentaAccent,
+    // M3 Surface Containers (Dark) - using proper tonal elevation
+    surfaceContainer = Color(0xFF1C2128),        // Base container level
+    surfaceContainerLow = Color(0xFF171A1E),     // Lower than container
+    surfaceContainerHigh = Color(0xFF25292F),    // Higher than container
+    surfaceContainerHighest = Color(0xFF2D3139), // Highest elevation
+    // M3 Fixed colors
+    primaryFixed = InnovexiaColors.GoldDim.copy(alpha = 0.16f),
+    primaryFixedDim = InnovexiaColors.GoldDim.copy(alpha = 0.10f),
+    onPrimaryFixed = InnovexiaColors.DarkTextPrimary,
+    secondaryContainer = InnovexiaColors.BlueAccent.copy(alpha = 0.16f),
+    onSecondaryContainer = InnovexiaColors.BlueAccent,
+    tertiaryContainer = InnovexiaColors.TealAccent.copy(alpha = 0.16f),
+    onTertiaryContainer = InnovexiaColors.TealAccent
 )

@@ -1,15 +1,11 @@
 package com.example.innovexia.ui.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,11 +21,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,16 +35,15 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 /**
- * WebSearchComposer - Dedicated web search input with blue accent theme
+ * WebSearchComposer - Material 3 web search input
  *
- * Features:
- * - Blue accent colors throughout
- * - Search icon on left
- * - Grounding toggle chip to disable web search mode
- * - "Search the web…" placeholder
- * - Send button appears when typing
- * - Red stop button during streaming
- * - Clean, focused web search experience
+ * Material 3 Features:
+ * - M3 secondary color scheme for search mode
+ * - Animated rotating search icon
+ * - Animated grounding chip with pulse effect
+ * - Enhanced focus states and animations
+ * - Spring bounce for send button
+ * - Pulsing stop button during streaming
  */
 @Composable
 fun WebSearchComposer(
@@ -58,7 +55,7 @@ fun WebSearchComposer(
     onDisableGrounding: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
+    val colorScheme = MaterialTheme.colorScheme
     val focusRequester = remember { FocusRequester() }
 
     // Auto-focus when composer appears
@@ -71,17 +68,25 @@ fun WebSearchComposer(
         }
     }
 
-    // Use same colors as ChatComposerV3
-    val c = ComposerTokens.Color
+    // Focus state for elevation animation
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
-    // Colors matching ChatComposerV3
-    val containerColor = if (isDark) c.ContainerDark else c.ContainerLight
-    val borderColor = if (isDark) c.BorderDark else c.BorderLight
-    val textColor = if (isDark) c.TextDark else c.TextLight
-    val placeholderColor = if (isDark) c.PlaceholderDark else c.PlaceholderLight
+    // Focus elevation animation
+    val focusScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.01f else 1f,
+        animationSpec = tween(
+            durationMillis = ComposerTokens.Motion.DurationMedium,
+            easing = ComposerTokens.Motion.EasingStandard
+        ),
+        label = "focus_scale"
+    )
 
-    // Subtle accent for grounding chip
-    val chipAccentColor = Color(0xFF4A90E2)
+    // Dark theme colors matching side menu - blue accent for search mode
+    val containerColor = Color(0xFF1E2329) // Slightly lighter dark surface for search
+    val borderColor = Color(0xFF4A90E2).copy(alpha = if (isFocused) 0.6f else 0.4f) // Blue accent border
+    val textColor = Color(0xFFE5EAF0) // Light text
+    val placeholderColor = Color(0xFF9AA6B2).copy(alpha = 0.7f) // Muted placeholder
 
     // Use same dimensions as ChatComposerV3
     val d = ComposerTokens.Dimen
@@ -90,7 +95,7 @@ fun WebSearchComposer(
         shape = RoundedCornerShape(d.Radius),
         color = containerColor,
         border = BorderStroke(1.dp, borderColor),
-        tonalElevation = 0.dp,
+        tonalElevation = if (isFocused) 2.dp else 0.dp,
         shadowElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
@@ -99,55 +104,51 @@ fun WebSearchComposer(
             .imePadding()
             .navigationBarsPadding()
             .widthIn(max = d.MaxWidth)
+            .scale(focusScale)
     ) {
         Row(
             Modifier.padding(horizontal = d.PadH, vertical = d.PadV),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Search icon (left)
+            // Animated search icon with rotation
+            val infiniteTransition = rememberInfiniteTransition(label = "search_rotation")
+            val rotation by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(8000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "search_rotate"
+            )
+
             Icon(
                 imageVector = Icons.Rounded.Search,
                 contentDescription = "Web search",
-                tint = textColor,
-                modifier = Modifier.size(d.IconSize)
+                tint = Color(0xFF4A90E2), // Blue accent
+                modifier = Modifier
+                    .size(d.IconSize)
+                    .rotate(rotation * 0.05f) // Subtle rotation effect
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(8.dp))
 
-            // Grounding toggle chip (compact)
-            Surface(
+            // Simple X button to exit grounding mode
+            FilledTonalIconButton(
                 onClick = onDisableGrounding,
-                shape = RoundedCornerShape(10.dp),
-                color = chipAccentColor,
-                modifier = Modifier.height(22.dp)
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = Color(0xFF2A323B).copy(alpha = 0.5f),
+                    contentColor = Color(0xFF9AA6B2)
+                ),
+                modifier = Modifier.size(32.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Public,
-                        contentDescription = "Grounding enabled",
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = "Grounding",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        maxLines = 1
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Disable grounding",
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(11.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = "Exit web search mode",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(8.dp))
 
             // Text input area
             Box(Modifier.weight(1f)) {
@@ -158,8 +159,9 @@ fun WebSearchComposer(
                         color = textColor,
                         lineHeight = 20.sp
                     ),
-                    cursorBrush = SolidColor(textColor),
+                    cursorBrush = SolidColor(Color(0xFF4A90E2)), // Blue accent cursor
                     maxLines = 6,
+                    interactionSource = interactionSource,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
@@ -182,7 +184,7 @@ fun WebSearchComposer(
 
             Spacer(Modifier.width(10.dp))
 
-            // Right side: Send OR Stop button with animation
+            // Right side: Send OR Stop button with M3 animations
             val canSend = value.isNotBlank()
             val buttonState = when {
                 isStreaming -> "stop"
@@ -193,53 +195,103 @@ fun WebSearchComposer(
             AnimatedContent(
                 targetState = buttonState,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(200)) + scaleIn(
-                        initialScale = 0.8f,
-                        animationSpec = tween(200)
-                    ) togetherWith fadeOut(animationSpec = tween(150)) + scaleOut(
-                        targetScale = 0.8f,
-                        animationSpec = tween(150)
+                    (fadeIn(
+                        animationSpec = tween(
+                            durationMillis = ComposerTokens.Motion.DurationMedium,
+                            easing = ComposerTokens.Motion.EasingEnter
+                        )
+                    ) + scaleIn(
+                        initialScale = 0.7f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )).togetherWith(
+                        fadeOut(
+                            animationSpec = tween(
+                                durationMillis = ComposerTokens.Motion.DurationShort,
+                                easing = ComposerTokens.Motion.EasingExit
+                            )
+                        ) + scaleOut(
+                            targetScale = 0.7f,
+                            animationSpec = tween(
+                                durationMillis = ComposerTokens.Motion.DurationShort,
+                                easing = ComposerTokens.Motion.EasingExit
+                            )
+                        )
                     )
                 },
                 label = "action_button_animation"
             ) { targetState ->
                 when (targetState) {
                     "stop" -> {
-                        // Red stop button during streaming
-                        Surface(
+                        // Pulsing stop button with M3 error color
+                        val infiniteTransition = rememberInfiniteTransition(label = "stop_pulse")
+                        val pulseScale by infiniteTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(800, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "stop_pulse_scale"
+                        )
+
+                        val pulseAlpha by infiniteTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 0.8f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(800, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "stop_pulse_alpha"
+                        )
+
+                        FilledIconButton(
                             onClick = onStopStreaming,
-                            shape = CircleShape,
-                            color = Color(0xFFDC2626),
-                            modifier = Modifier.size(d.IconFrame)
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = colorScheme.error
+                            ),
+                            modifier = Modifier
+                                .size(d.IconFrame)
+                                .scale(pulseScale)
+                                .graphicsLayer { alpha = pulseAlpha }
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(d.IconSize - 4.dp)
-                                        .background(
-                                            Color.White,
-                                            RoundedCornerShape(3.dp)
-                                        )
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Rounded.Stop,
+                                contentDescription = "Stop streaming",
+                                tint = colorScheme.onError,
+                                modifier = Modifier.size(d.IconSize)
+                            )
                         }
                     }
                     "send" -> {
-                        // Search button with scale animation (glass style like ChatComposerV3)
+                        // Search button with spring bounce animation
                         val scale by animateFloatAsState(
                             targetValue = 1f,
-                            animationSpec = tween(200),
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            ),
                             label = "send_scale"
                         )
 
-                        GlassIconFrame(
-                            icon = Icons.Rounded.Search,
-                            contentDesc = "Search",
+                        FilledIconButton(
                             onClick = onSend,
-                            enabled = true,
-                            iconTint = if (isDark) Color.White else Color.Black,
-                            modifier = Modifier.scale(scale)
-                        )
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = Color(0xFF4A90E2), // Blue accent
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .size(d.IconFrame)
+                                .scale(scale)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = "Search",
+                                modifier = Modifier.size(d.IconSize)
+                            )
+                        }
                     }
                     else -> {
                         // Empty space when no text

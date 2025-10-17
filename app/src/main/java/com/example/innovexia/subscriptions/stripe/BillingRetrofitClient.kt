@@ -19,8 +19,9 @@ object BillingRetrofitClient {
     // For physical device on same WiFi network (replace with your computer's IP)
     private const val PHYSICAL_DEVICE_BASE_URL = "http://10.0.0.53:4242/"
 
-    // For production
-    private const val PRODUCTION_BASE_URL = "https://your-server.com/"
+    // For production - UPDATE THIS with your Render.com URL after deployment
+    // Example: "https://innovexia-stripe-server.onrender.com/"
+    private const val PRODUCTION_BASE_URL = "https://your-render-app.onrender.com/"
 
     /**
      * Auto-detect if running on emulator or physical device
@@ -36,8 +37,25 @@ object BillingRetrofitClient {
                 || "google_sdk" == Build.PRODUCT)
     }
 
-    // Automatically choose the right URL based on device type
-    private val BASE_URL = if (isEmulator()) EMULATOR_BASE_URL else PHYSICAL_DEVICE_BASE_URL
+    /**
+     * Determine which URL to use based on build type and device
+     * - Debug builds: Use local server (emulator or physical device)
+     * - Release builds: Use production server
+     */
+    private val BASE_URL = when {
+        BuildConfig.DEBUG && isEmulator() -> {
+            println("🔧 Billing: Using EMULATOR local server")
+            EMULATOR_BASE_URL
+        }
+        BuildConfig.DEBUG -> {
+            println("🔧 Billing: Using PHYSICAL DEVICE local server")
+            PHYSICAL_DEVICE_BASE_URL
+        }
+        else -> {
+            println("🚀 Billing: Using PRODUCTION server")
+            PRODUCTION_BASE_URL
+        }
+    }
 
     private val gson = GsonBuilder()
         .setLenient()

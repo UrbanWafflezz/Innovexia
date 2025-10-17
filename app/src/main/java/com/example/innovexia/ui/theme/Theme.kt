@@ -27,44 +27,86 @@ object InnovexiaTheme {
 
 /**
  * Light color scheme using unified color tokens
+ * Full Material 3 color system implementation
  */
 private val LightColorScheme = lightColorScheme(
     primary = InnovexiaColors.Gold,
     onPrimary = InnovexiaColors.OnGold,
-    primaryContainer = InnovexiaColors.Gold.copy(alpha = 0.1f),
+    primaryContainer = InnovexiaColors.Gold.copy(alpha = 0.12f),
     onPrimaryContainer = InnovexiaColors.LightTextPrimary,
+    inversePrimary = InnovexiaColors.GoldDim,
+
     secondary = InnovexiaColors.BlueAccent,
     onSecondary = Color.White,
+    secondaryContainer = InnovexiaColors.BlueAccent.copy(alpha = 0.12f),
+    onSecondaryContainer = InnovexiaColors.BlueBright,
+
+    tertiary = InnovexiaColors.TealAccent,
+    onTertiary = Color.White,
+    tertiaryContainer = InnovexiaColors.TealAccent.copy(alpha = 0.12f),
+    onTertiaryContainer = InnovexiaColors.TealAccent,
+
     surface = InnovexiaColors.LightSurface,
     onSurface = InnovexiaColors.LightTextPrimary,
-    surfaceVariant = InnovexiaColors.LightSurfaceElevated,
+    surfaceVariant = Color(0xFFF3F4F6),
     onSurfaceVariant = InnovexiaColors.LightTextSecondary,
+    surfaceTint = InnovexiaColors.Gold,
+    inverseSurface = InnovexiaColors.DarkSurface,
+    inverseOnSurface = InnovexiaColors.DarkTextPrimary,
+
     background = InnovexiaColors.LightBackground,
     onBackground = InnovexiaColors.LightTextPrimary,
-    outline = InnovexiaColors.LightBorder,
+
     error = InnovexiaColors.Error,
-    onError = Color.White
+    onError = Color.White,
+    errorContainer = InnovexiaColors.Error.copy(alpha = 0.12f),
+    onErrorContainer = InnovexiaColors.ErrorAlt,
+
+    outline = InnovexiaColors.LightBorder,
+    outlineVariant = InnovexiaColors.LightBorderLight,
+    scrim = Color.Black.copy(alpha = 0.32f)
 )
 
 /**
  * Dark color scheme using unified color tokens
+ * Full Material 3 color system implementation
  */
 private val DarkColorScheme = darkColorScheme(
     primary = InnovexiaColors.GoldDim,
     onPrimary = InnovexiaColors.OnGold,
-    primaryContainer = InnovexiaColors.GoldDim.copy(alpha = 0.2f),
+    primaryContainer = InnovexiaColors.GoldDim.copy(alpha = 0.16f),
     onPrimaryContainer = InnovexiaColors.DarkTextPrimary,
+    inversePrimary = InnovexiaColors.Gold,
+
     secondary = InnovexiaColors.BlueAccent,
     onSecondary = Color.White,
+    secondaryContainer = InnovexiaColors.BlueAccent.copy(alpha = 0.16f),
+    onSecondaryContainer = InnovexiaColors.BlueAccent,
+
+    tertiary = InnovexiaColors.TealAccent,
+    onTertiary = Color.White,
+    tertiaryContainer = InnovexiaColors.TealAccent.copy(alpha = 0.16f),
+    onTertiaryContainer = InnovexiaColors.TealAccent,
+
     surface = InnovexiaColors.DarkSurface,
     onSurface = InnovexiaColors.DarkTextPrimary,
-    surfaceVariant = InnovexiaColors.DarkSurfaceElevated,
+    surfaceVariant = Color(0xFF1C2128),
     onSurfaceVariant = InnovexiaColors.DarkTextSecondary,
+    surfaceTint = InnovexiaColors.GoldDim,
+    inverseSurface = InnovexiaColors.LightSurface,
+    inverseOnSurface = InnovexiaColors.LightTextPrimary,
+
     background = InnovexiaColors.DarkBackground,
     onBackground = InnovexiaColors.DarkTextPrimary,
-    outline = InnovexiaColors.DarkBorder,
+
     error = InnovexiaColors.Error,
-    onError = Color.White
+    onError = Color.White,
+    errorContainer = InnovexiaColors.Error.copy(alpha = 0.16f),
+    onErrorContainer = InnovexiaColors.Error,
+
+    outline = InnovexiaColors.DarkBorder,
+    outlineVariant = InnovexiaColors.DarkBorder.copy(alpha = 0.5f),
+    scrim = Color.Black.copy(alpha = 0.5f)
 )
 
 /**

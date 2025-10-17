@@ -108,9 +108,13 @@ fun SideMenuNew(
     ModalDrawerSheet(
         modifier = modifier
             .fillMaxHeight()
-            .widthIn(max = 420.dp)
-            .fillMaxWidth(0.88f),
-        drawerContainerColor = Color.Transparent
+            .widthIn(max = 340.dp),
+        drawerContainerColor = if (darkTheme) {
+            MaterialTheme.colorScheme.surfaceVariant
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
     ) {
         Box(
             modifier = Modifier
@@ -118,47 +122,22 @@ fun SideMenuNew(
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 }
-                .clip(RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp))
-                .background(
-                    if (darkTheme) {
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                InnovexiaColors.DarkGradientStart,
-                                InnovexiaColors.DarkGradientMid,
-                                InnovexiaColors.DarkGradientEnd
-                            )
-                        )
-                    } else {
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                InnovexiaColors.LightGradientStart,
-                                InnovexiaColors.LightGradientMid,
-                                InnovexiaColors.LightGradientEnd
-                            )
-                        )
-                    }
-                )
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Fixed header
-                DrawerHeader(
-                    onNewChat = onNewChat,
-                    modifier = Modifier.padding(top = 20.dp)
-                )
+                Spacer(Modifier.height(20.dp))
 
-                Spacer(Modifier.height(12.dp))
-
-                // Fixed search bar
+                // Search bar with embedded New button
                 DrawerSearchBar(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.padding(horizontal = 20.dp),
-                    darkTheme = darkTheme
+                    darkTheme = darkTheme,
+                    onNewChat = onNewChat
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // Cloud Restore Button (if visible)
                 if (showCloudRestoreButton) {
@@ -391,6 +370,7 @@ private fun CloudRestoreButtonCompact(
 
 /**
  * Multi-select action bar for batch operations
+ * Material 3 design with filled tonal buttons and proper elevation
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -408,52 +388,50 @@ private fun MultiSelectActionBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = if (darkTheme) InnovexiaColors.DarkSurfaceElevated
-        else InnovexiaColors.LightSurfaceElevated,
-        tonalElevation = 4.dp
+        shape = RoundedCornerShape(InnovexiaDesign.Radius.Large),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 3.dp,
+        shadowElevation = 1.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Cancel button
+            // Cancel button with count
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (darkTheme) InnovexiaColors.DarkBackground
-                            else InnovexiaColors.LightBackground
-                        )
-                        .combinedClickable(onClick = onCancel)
-                        .padding(6.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    onClick = onCancel,
+                    shape = RoundedCornerShape(InnovexiaDesign.Radius.Medium),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Cancel",
-                        tint = if (darkTheme) InnovexiaColors.DarkTextPrimary
-                        else InnovexiaColors.LightTextPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Cancel selection",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
                 Text(
                     text = "$selectedCount selected",
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        fontSize = 15.sp
                     ),
-                    color = if (darkTheme) InnovexiaColors.DarkTextPrimary
-                    else InnovexiaColors.LightTextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -463,120 +441,126 @@ private fun MultiSelectActionBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Select All
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (darkTheme) InnovexiaColors.BlueAccent.copy(alpha = 0.2f)
-                            else InnovexiaColors.BlueAccent.copy(alpha = 0.15f)
-                        )
-                        .combinedClickable(onClick = onSelectAll)
-                        .padding(6.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    onClick = onSelectAll,
+                    shape = RoundedCornerShape(InnovexiaDesign.Radius.Medium),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CheckCircle,
-                        contentDescription = "Select All",
-                        tint = InnovexiaColors.BlueAccent,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = "Select all",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
                 // Archive button (only show in Active tab)
                 if (currentTab == ChatState.ACTIVE) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (darkTheme) Color(0xFFFFA500).copy(alpha = 0.2f)
-                                else Color(0xFFFFA500).copy(alpha = 0.15f)
-                            )
-                            .combinedClickable(
-                                onClick = onArchive,
-                                enabled = selectedCount > 0
-                            )
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        onClick = onArchive,
+                        enabled = selectedCount > 0,
+                        shape = RoundedCornerShape(InnovexiaDesign.Radius.Medium),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        tonalElevation = 1.dp,
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Archive,
-                            contentDescription = "Archive",
-                            tint = if (selectedCount > 0) Color(0xFFFFA500)
-                            else Color(0xFFFFA500).copy(alpha = 0.5f),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Archive,
+                                contentDescription = "Archive selected",
+                                tint = if (selectedCount > 0)
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.38f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
 
                 // Unarchive button (only show in Archived tab)
                 if (currentTab == ChatState.ARCHIVED) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (darkTheme) InnovexiaColors.BlueAccent.copy(alpha = 0.2f)
-                                else InnovexiaColors.BlueAccent.copy(alpha = 0.15f)
-                            )
-                            .combinedClickable(
-                                onClick = onUnarchive,
-                                enabled = selectedCount > 0
-                            )
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        onClick = onUnarchive,
+                        enabled = selectedCount > 0,
+                        shape = RoundedCornerShape(InnovexiaDesign.Radius.Medium),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        tonalElevation = 1.dp,
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Unarchive,
-                            contentDescription = "Unarchive",
-                            tint = if (selectedCount > 0) InnovexiaColors.BlueAccent
-                            else InnovexiaColors.BlueAccent.copy(alpha = 0.5f),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Unarchive,
+                                contentDescription = "Unarchive selected",
+                                tint = if (selectedCount > 0)
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.38f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
 
                 // Empty Trash (only show in trash tab)
                 if (currentTab == ChatState.TRASH) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(InnovexiaColors.Error.copy(alpha = 0.2f))
-                            .combinedClickable(onClick = onEmptyTrash)
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        onClick = onEmptyTrash,
+                        shape = RoundedCornerShape(InnovexiaDesign.Radius.Medium),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        tonalElevation = 1.dp,
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.DeleteSweep,
-                            contentDescription = "Empty Trash",
-                            tint = InnovexiaColors.Error,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DeleteSweep,
+                                contentDescription = "Empty trash",
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
 
                 // Delete Selected
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(InnovexiaColors.Error.copy(alpha = 0.2f))
-                        .combinedClickable(
-                            onClick = onDelete,
-                            enabled = selectedCount > 0
-                        )
-                        .padding(6.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    onClick = onDelete,
+                    enabled = selectedCount > 0,
+                    shape = RoundedCornerShape(InnovexiaDesign.Radius.Medium),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete",
-                        tint = if (selectedCount > 0) InnovexiaColors.Error
-                        else InnovexiaColors.Error.copy(alpha = 0.5f),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = "Delete selected",
+                            tint = if (selectedCount > 0)
+                                MaterialTheme.colorScheme.onErrorContainer
+                            else
+                                MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.38f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }

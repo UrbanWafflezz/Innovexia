@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="20dp"
+    android:viewportWidth="120"
+    android:viewportHeight="20">
+
+    <!-- Simple "Innovexia" text in dark gray for light mode -->
+    <path
+        android:fillColor="#111827"
+        android:pathData="M10,5 v10 M15,5 v10 M15,5 l5,10 l5,-10 v10 M30,5 v10 M30,5 h8 v10 h-8 M42,5 v10 M42,5 h8 v10 h-8 M54,10 m-5,0 a5,5 0,1,0 10,0 a5,5 0,1,0 -10,0 M69,5 l5,10 l5,-10 M83,5 h8 v10 h-8 M95,5 l4,5 l-4,5 l4,5 M103,5 v10 M103,5 h8 v10 h-8 M115,15 l-5,-10 h5 l5,10 z"/>
+</vector>

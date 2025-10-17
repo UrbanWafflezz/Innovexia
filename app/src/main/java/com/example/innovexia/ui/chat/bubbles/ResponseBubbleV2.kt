@@ -1,9 +1,8 @@
 package com.example.innovexia.ui.chat.bubbles
 import com.example.innovexia.core.ai.getModelLabel
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -35,10 +34,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
 import com.example.innovexia.data.local.entities.MessageEntity
 import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.data.ai.GroundingMetadata
+import com.example.innovexia.ui.animations.MotionDefaults
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -83,19 +84,47 @@ fun ResponseBubbleV2(
     val textSecondary = if (isDark) Color(0xFFB7C0CC) else Color(0xFF86868B)
     val dividerColor = if (isDark) Color(0xFF2A323B).copy(alpha = 0.4f) else Color(0xFFD1D1D6)
 
+    // Fast Material 3 entrance animation - optimized for streaming
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(message.id) {
+        isVisible = true
+    }
+
+    val offsetX by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else (-20).dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "bubble_slide_in"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 150,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "bubble_fade_in"
+    )
+
     Surface(
         color = bubbleColor,
         shape = RoundedCornerShape(18.dp),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
         border = BorderStroke(1.dp, borderColor),
         modifier = modifier
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .fillMaxWidth()
+            .graphicsLayer {
+                translationX = offsetX.toPx()
+                this.alpha = alpha
+            }
             .animateContentSize(
-                animationSpec = tween(
-                    durationMillis = 150,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
                 )
             )
     ) {
@@ -106,9 +135,10 @@ fun ResponseBubbleV2(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .animateContentSize(
-                            animationSpec = tween(
-                                durationMillis = 100,
-                                easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessHigh,
+                                visibilityThreshold = IntSize(1, 1)
                             )
                         ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -771,61 +801,186 @@ private fun ImageBlock(block: MarkdownBlock.Image) {
 }
 
 /**
- * Sending indicator - shows "Sending..." before response starts
+ * Sending indicator - Ultra-smooth Material 3 animation with fun rotating messages
+ * Fast, responsive, no lag
  */
 @Composable
 private fun SendingIndicator(textSecondary: Color) {
+    val infiniteTransition = rememberInfiniteTransition(label = "sending_animation")
+
+    // Fun thinking messages that rotate
+    val thinkingMessages = remember {
+        listOf(
+            "Sending",
+            "Thinking",
+            "Processing",
+            "Chatting",
+            "Pondering",
+            "Analyzing",
+            "Crafting response",
+            "Contemplating",
+            "Computing",
+            "Brainstorming",
+            "Working on it",
+            "Just a moment",
+            "Formulating",
+            "Preparing reply"
+        )
+    }
+
+    // Rotate message every 1.5 seconds
+    var currentMessageIndex by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(1500)
+            currentMessageIndex = (currentMessageIndex + 1) % thinkingMessages.size
+        }
+    }
+
+    // Smooth fade animation for text transitions
+    val textAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 800,
+                easing = LinearOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "text_pulse"
+    )
+
     Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier.padding(vertical = 2.dp)
     ) {
-        // Animated dots
+        // Animated dots with smooth wave effect
         repeat(3) { index ->
-            val alpha by animateFloatAsState(
-                targetValue = if ((System.currentTimeMillis() / 400 % 3).toInt() == index) 1f else 0.3f,
-                animationSpec = tween(400),
-                label = "sending_dot_$index"
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 1.3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 500,
+                        delayMillis = index * 120,
+                        easing = LinearOutSlowInEasing
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "sending_dot_scale_$index"
             )
+
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.35f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 500,
+                        delayMillis = index * 120,
+                        easing = LinearOutSlowInEasing
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "sending_dot_alpha_$index"
+            )
+
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(8.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        this.alpha = alpha
+                    }
                     .background(
-                        color = textSecondary.copy(alpha = alpha),
+                        color = InnovexiaColors.BlueAccent,
                         shape = RoundedCornerShape(50)
                     )
             )
         }
 
-        Text(
-            text = "Sending",
-            fontSize = 13.sp,
-            color = textSecondary,
-            fontStyle = FontStyle.Italic
-        )
+        // Animated rotating text with crossfade
+        androidx.compose.animation.AnimatedContent(
+            targetState = thinkingMessages[currentMessageIndex],
+            transitionSpec = {
+                fadeIn(
+                    animationSpec = tween(300, easing = LinearOutSlowInEasing)
+                ) togetherWith fadeOut(
+                    animationSpec = tween(300, easing = FastOutLinearInEasing)
+                )
+            },
+            label = "thinking_text_transition"
+        ) { message ->
+            Text(
+                text = message,
+                fontSize = 13.sp,
+                color = textSecondary,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.graphicsLayer {
+                    alpha = textAlpha
+                }
+            )
+        }
     }
 }
 
 /**
- * Streaming indicator
+ * Streaming indicator - Ultra-smooth Material 3 wave animation
+ * Optimized for seamless, lag-free streaming experience
  */
 @Composable
 private fun StreamingIndicator(textSecondary: Color) {
+    val infiniteTransition = rememberInfiniteTransition(label = "streaming_animation")
+
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
     ) {
         repeat(3) { index ->
-            val alpha by animateFloatAsState(
-                targetValue = if ((System.currentTimeMillis() / 400 % 3).toInt() == index) 1f else 0.3f,
-                animationSpec = tween(400),
-                label = "dot_$index"
+            // Fast, smooth oscillation with minimal delay
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 1.3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 500,
+                        delayMillis = index * 120,
+                        easing = LinearOutSlowInEasing
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "streaming_dot_scale_$index"
             )
+
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.35f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 500,
+                        delayMillis = index * 120,
+                        easing = LinearOutSlowInEasing
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "streaming_dot_alpha_$index"
+            )
+
+            // Smooth gradient effect
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(8.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        this.alpha = alpha
+                    }
                     .background(
-                        color = textSecondary.copy(alpha = alpha),
+                        color = InnovexiaColors.TealAccent,
                         shape = RoundedCornerShape(50)
                     )
             )

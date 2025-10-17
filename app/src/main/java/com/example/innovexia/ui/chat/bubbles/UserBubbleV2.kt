@@ -30,6 +30,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.example.innovexia.data.local.entities.MessageEntity
 import com.example.innovexia.data.local.entities.MsgStatus
 import com.example.innovexia.data.models.AttachmentMeta
+import com.example.innovexia.ui.animations.MotionDefaults
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -140,6 +143,30 @@ fun UserBubbleV2(
         else -> UserBubbleTokens.PadH
     }
 
+    // Fast Material 3 entrance animation - optimized for instant feel
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(msg.id) {
+        isVisible = true
+    }
+
+    val offsetX by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else 20.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "user_bubble_slide_in"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 150,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "user_bubble_fade_in"
+    )
+
     // Right-aligned row wrapper
     Row(
         modifier = modifier
@@ -150,11 +177,15 @@ fun UserBubbleV2(
         Surface(
             color = UserBubbleTokens.bg(),
             shape = RoundedCornerShape(UserBubbleTokens.Radius),
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
+            tonalElevation = 2.dp,
+            shadowElevation = 4.dp,
             border = BorderStroke(1.dp, UserBubbleTokens.border()),
             modifier = Modifier
                 .widthIn(min = dynamicMinWidth, max = dynamicMaxWidth)
+                .graphicsLayer {
+                    translationX = offsetX.toPx()
+                    this.alpha = alpha
+                }
                 .animateContentSize(
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,

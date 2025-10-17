@@ -3,6 +3,7 @@ package com.example.innovexia.ui.components
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Archive
@@ -19,11 +20,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.innovexia.ui.models.ChatListItem
 import com.example.innovexia.ui.models.ChatState
-import com.example.innovexia.ui.theme.InnovexiaColors
 
 /**
  * Actions available for chat items
@@ -39,6 +40,7 @@ sealed class ChatItemAction {
 
 /**
  * Context menu for chat items (triggered by long-press)
+ * Material 3 design with proper container and text styles
  */
 @Composable
 fun ChatItemContextMenu(
@@ -55,13 +57,13 @@ fun ChatItemContextMenu(
         onDismissRequest = onDismiss,
         modifier = modifier
             .background(
-                InnovexiaColors.DarkSurfaceElevated,
-                shape = RoundedCornerShape(16.dp)
+                MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(12.dp)
             )
             .border(
                 width = 1.dp,
-                color = InnovexiaColors.DarkBorder.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(16.dp)
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
             )
     ) {
         when (item.state) {
@@ -71,8 +73,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = if (item.pinned) "Unpin" else "Pin",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.DarkTextPrimary
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -84,7 +89,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = if (item.pinned) Icons.Rounded.StarBorder else Icons.Rounded.Star,
                             contentDescription = null,
-                            tint = InnovexiaColors.GoldDim
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -94,8 +100,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Archive",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.DarkTextPrimary
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -107,7 +116,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.Archive,
                             contentDescription = null,
-                            tint = InnovexiaColors.DarkTextSecondary
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -117,8 +127,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Move to Trash",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.DarkTextPrimary
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -130,7 +143,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.Delete,
                             contentDescription = null,
-                            tint = InnovexiaColors.DarkTextSecondary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -140,8 +154,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Delete Permanently",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.Error
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.error
                         )
                     },
                     onClick = {
@@ -153,7 +170,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.DeleteForever,
                             contentDescription = null,
-                            tint = InnovexiaColors.Error
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -165,8 +183,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Unarchive",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.DarkTextPrimary
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -178,7 +199,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.Restore,
                             contentDescription = null,
-                            tint = InnovexiaColors.GoldDim
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -188,8 +210,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Move to Trash",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.DarkTextPrimary
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -201,7 +226,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.Delete,
                             contentDescription = null,
-                            tint = InnovexiaColors.DarkTextSecondary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -211,8 +237,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Delete Permanently",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.Error
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.error
                         )
                     },
                     onClick = {
@@ -224,7 +253,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.DeleteForever,
                             contentDescription = null,
-                            tint = InnovexiaColors.Error
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -236,8 +266,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Restore",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.DarkTextPrimary
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
@@ -249,7 +282,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.Restore,
                             contentDescription = null,
-                            tint = InnovexiaColors.GoldDim
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )
@@ -259,8 +293,11 @@ fun ChatItemContextMenu(
                     text = {
                         Text(
                             text = "Delete Permanently",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                            color = InnovexiaColors.Error
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.error
                         )
                     },
                     onClick = {
@@ -272,7 +309,8 @@ fun ChatItemContextMenu(
                         Icon(
                             imageVector = Icons.Rounded.DeleteForever,
                             contentDescription = null,
-                            tint = InnovexiaColors.Error
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 )

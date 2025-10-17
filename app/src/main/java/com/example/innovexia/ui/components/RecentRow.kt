@@ -1,9 +1,14 @@
 package com.example.innovexia.ui.components
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,13 +25,16 @@ import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +49,7 @@ import kotlin.math.max
 
 /**
  * Individual chat row in the drawer list
+ * Material 3 design with improved states and elevation
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -55,38 +64,44 @@ fun RecentRow(
     isSelected: Boolean = false
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
 
+    // Animate scale when pressed
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "pressScale"
+    )
+
+    // Surface colors that blend with side menu background
     val surfaceColor = when {
-        isSelected -> InnovexiaColors.BlueAccent.copy(alpha = 0.15f)
-        darkTheme -> {
-            if (isPinned) InnovexiaColors.DarkSurfaceElevated.copy(alpha = 0.8f)
-            else InnovexiaColors.DarkSurfaceElevated
-        }
-        else -> {
-            if (isPinned) InnovexiaColors.LightSurfaceElevated.copy(alpha = 0.8f)
-            else InnovexiaColors.LightSurfaceElevated
-        }
+        isSelected -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
     }
 
     val borderColor = when {
-        isSelected -> InnovexiaColors.BlueAccent
-        darkTheme -> {
-            if (isPinned) InnovexiaColors.GoldDim.copy(alpha = 0.3f)
-            else InnovexiaColors.DarkBorder.copy(alpha = 0.6f)
-        }
-        else -> {
-            if (isPinned) InnovexiaColors.Gold.copy(alpha = 0.3f)
-            else InnovexiaColors.LightBorder.copy(alpha = 0.6f)
-        }
+        isSelected -> MaterialTheme.colorScheme.secondary
+        isPinned -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     }
 
     Surface(
         shape = RoundedCornerShape(InnovexiaDesign.Radius.Large),
         color = surfaceColor,
-        border = BorderStroke(1.dp, borderColor),
-        tonalElevation = 0.dp,
+        border = BorderStroke(0.5.dp, borderColor),
+        tonalElevation = if (isSelected) 2.dp else 0.dp,
         modifier = modifier
             .fillMaxWidth()
+            .scale(scale)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
             .combinedClickable(
                 interactionSource = interaction,
                 indication = ripple(),
@@ -95,7 +110,7 @@ fun RecentRow(
             )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Multi-select checkbox (replaces persona stack in multi-select mode)
@@ -103,16 +118,15 @@ fun RecentRow(
                 Icon(
                     imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                     contentDescription = if (isSelected) "Selected" else "Not selected",
-                    tint = if (isSelected) InnovexiaColors.BlueAccent
-                    else if (darkTheme) InnovexiaColors.DarkTextSecondary
-                    else InnovexiaColors.LightTextSecondary,
-                    modifier = Modifier.size(28.dp)
+                    tint = if (isSelected) MaterialTheme.colorScheme.secondary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(14.dp))
             } else {
                 // Persona stack
                 PersonaStack(initials = item.personaInitials)
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(14.dp))
             }
 
             // Title and message preview
@@ -125,33 +139,40 @@ fun RecentRow(
                         Icon(
                             imageVector = Icons.Rounded.PushPin,
                             contentDescription = "Pinned",
-                            modifier = Modifier.size(14.dp),
-                            tint = InnovexiaColors.GoldDim
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                     Text(
                         text = item.title,
-                        color = if (darkTheme) InnovexiaColors.DarkTextPrimary else InnovexiaColors.LightTextPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                 }
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = item.lastMessage,
-                    color = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
+            Spacer(Modifier.width(8.dp))
+
             // Right side: cloud indicator and time
             Column(
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
             ) {
                 // Cloud sync indicator (small, minimal space)
                 // Shows actual sync status based on cloudId
@@ -160,36 +181,33 @@ fun RecentRow(
                     Icon(
                         imageVector = Icons.Rounded.CloudOff,
                         contentDescription = "Local only (Incognito)",
-                        modifier = Modifier.size(12.dp),
-                        tint = if (darkTheme) InnovexiaColors.DarkTextSecondary.copy(alpha = 0.5f)
-                               else InnovexiaColors.LightTextSecondary.copy(alpha = 0.5f)
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 } else if (item.isSyncedToCloud) {
                     // Has been synced to cloud (has cloudId)
                     Icon(
                         imageVector = Icons.Rounded.Cloud,
                         contentDescription = "Synced to cloud",
-                        modifier = Modifier.size(12.dp),
-                        tint = if (darkTheme) InnovexiaColors.BlueAccent.copy(alpha = 0.6f)
-                               else InnovexiaColors.BlueAccent.copy(alpha = 0.5f)
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
                     )
                 } else {
                     // Not synced yet (local only for now)
                     Icon(
                         imageVector = Icons.Rounded.CloudOff,
                         contentDescription = "Local (not yet synced)",
-                        modifier = Modifier.size(12.dp),
-                        tint = if (darkTheme) InnovexiaColors.DarkTextSecondary.copy(alpha = 0.4f)
-                               else InnovexiaColors.LightTextSecondary.copy(alpha = 0.4f)
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
 
-                Spacer(Modifier.height(4.dp))
-
                 Text(
                     text = formatTime(item.updatedAt),
-                    color = if (darkTheme) InnovexiaColors.DarkTextSecondary else InnovexiaColors.LightTextSecondary,
-                    fontSize = 11.sp
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
         }

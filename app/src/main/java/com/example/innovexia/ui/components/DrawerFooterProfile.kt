@@ -1,8 +1,13 @@
 package com.example.innovexia.ui.components
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,14 +23,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +77,19 @@ fun DrawerFooterProfile(
     val burstCount by subscriptionViewModel.burstCount.collectAsState()
     val planLimits by subscriptionViewModel.planLimits.collectAsState()
 
+    val profileInteraction = remember { MutableInteractionSource() }
+    val isProfilePressed by profileInteraction.collectIsPressedAsState()
+
+    // Animate profile card scale when pressed
+    val profileScale by animateFloatAsState(
+        targetValue = if (isProfilePressed) 0.97f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "profileScale"
+    )
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -77,12 +98,17 @@ fun DrawerFooterProfile(
     ) {
         // Profile card
         Surface(
-            color = InnovexiaColors.DarkSurfaceElevated.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, InnovexiaColors.DarkBorder.copy(alpha = 0.6f)),
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            tonalElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onOpenQuickPanel() }
+                .scale(profileScale)
+                .clickable(
+                    interactionSource = profileInteraction,
+                    indication = null
+                ) { onOpenQuickPanel() }
         ) {
             Row(
                 modifier = Modifier.padding(12.dp),
@@ -97,7 +123,7 @@ fun DrawerFooterProfile(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = if (isGuest) "Guest mode" else (user?.displayName ?: "Guest"),
-                        color = InnovexiaColors.DarkTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -109,7 +135,7 @@ fun DrawerFooterProfile(
                     }
                     Text(
                         text = subText,
-                        color = InnovexiaColors.DarkTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -121,12 +147,12 @@ fun DrawerFooterProfile(
                     // Show "Free" badge for guests
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = InnovexiaColors.DarkSurface.copy(alpha = 0.4f),
-                        border = BorderStroke(1.dp, InnovexiaColors.DarkBorder.copy(alpha = 0.3f))
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Text(
                             text = "Free",
-                            color = InnovexiaColors.DarkTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -139,9 +165,10 @@ fun DrawerFooterProfile(
         // Rate Limit card - only show for guest users
         if (isGuest) {
             Surface(
-                color = InnovexiaColors.DarkSurfaceElevated.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, InnovexiaColors.DarkBorder.copy(alpha = 0.3f)),
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -158,20 +185,20 @@ fun DrawerFooterProfile(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(InnovexiaColors.BlueAccent.copy(alpha = 0.15f)),
+                                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Speed,
                                 contentDescription = "Rate Limit",
-                                tint = InnovexiaColors.BlueAccent,
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(14.dp)
                             )
                         }
 
                         Text(
                             text = "Rate Limit",
-                            color = InnovexiaColors.DarkTextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -183,16 +210,16 @@ fun DrawerFooterProfile(
                         Text(
                             text = "$burstCount / ${planLimits.burstRequestsPerMinute} requests",
                             color = if (burstCount >= planLimits.burstRequestsPerMinute * 0.9f) {
-                                InnovexiaColors.ErrorRed
+                                MaterialTheme.colorScheme.error
                             } else {
-                                InnovexiaColors.DarkTextPrimary
+                                MaterialTheme.colorScheme.onSurface
                             },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             text = "per minute",
-                            color = InnovexiaColors.DarkTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 10.sp
                         )
                     }

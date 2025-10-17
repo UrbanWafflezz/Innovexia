@@ -1,8 +1,7 @@
 package com.example.innovexia.ui.chat
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -20,8 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,20 +34,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import com.example.innovexia.R
 import com.example.innovexia.ui.theme.InnovexiaTokens
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
- * Chat header with refined dark mode design and adaptive New Chat/Incognito button.
+ * Material 3 Chat Header - Compact Edition
  *
  * Features:
- * - Premium dark gray elevated surface
- * - Animated button swap (New Chat ↔ Incognito)
- * - 60/90/120 Hz optimized transitions
- * - Subtle borders and proper spacing
+ * - Matches ChatComposerV3 background color exactly
+ * - Compact layout with minimal padding
+ * - Small, clean buttons
+ * - Smooth model dropdown
+ * - Material 3 design principles
  */
 @Composable
 fun ChatHeader(
@@ -58,18 +64,13 @@ fun ChatHeader(
     onTitleClick: (() -> Unit)? = null,
     isGuest: Boolean = false
 ) {
-    // Match the gradient background used by GradientScaffold
-    val isDark = isSystemInDarkTheme()
-    val surfaceColor = if (isDark) {
-        com.example.innovexia.ui.theme.InnovexiaColors.DarkGradientStart
-    } else {
-        com.example.innovexia.ui.theme.InnovexiaColors.LightGradientStart
-    }
-    val iconTint = MaterialTheme.colorScheme.onBackground
-    val textColor = MaterialTheme.colorScheme.onBackground
+    // Match ChatComposerV3 background exactly
+    val containerColor = Color(0xFF171A1E) // Same as ChatComposerV3
+    val iconTint = Color(0xFFE5EAF0) // Light icons
+    val textColor = Color(0xFFE5EAF0)
 
     Surface(
-        color = surfaceColor,
+        color = containerColor,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         modifier = modifier
@@ -79,115 +80,74 @@ fun ChatHeader(
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(
-                    horizontal = InnovexiaTokens.Space.M,
-                    vertical = InnovexiaTokens.Space.XS
+                    horizontal = 12.dp,
+                    vertical = 4.dp
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left menu button - smaller
+            // Left menu button - slightly bigger for easy access
             IconButton(
                 onClick = onOpenMenu,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Menu,
                     contentDescription = "Menu",
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
             Spacer(Modifier.width(8.dp))
 
-            // Title with glass background - clickable if onTitleClick provided and not guest
+            // Title with Material 3 dropdown style - compact
             if (onTitleClick != null && !isGuest) {
-                // Glass background with subtle gradient
-                val glassTint = if (isDark) {
-                    Color.White.copy(alpha = 0.08f)
-                } else {
-                    Color.White.copy(alpha = 0.72f)
-                }
-
-                val glassBorder = if (isDark) {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.15f),
-                            Color.White.copy(alpha = 0.05f)
-                        )
-                    )
-                } else {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.8f),
-                            Color.White.copy(alpha = 0.4f)
-                        )
-                    )
-                }
-
                 // Wrapper with weight to control expansion
                 Box(modifier = Modifier.weight(1f)) {
-                    // Glass pill centered or left-aligned, never fills full width
-                    Box(
+                    // M3 surface container - compact
+                    Surface(
+                        onClick = onTitleClick,
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF2A323B).copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, Color(0xFF4A525B).copy(alpha = 0.3f)),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .widthIn(max = 280.dp) // Max width constraint
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, glassBorder, RoundedCornerShape(20.dp))
-                            .background(glassTint)
-                            .drawWithCache {
-                                onDrawBehind {
-                                    // Subtle specular highlight
-                                    val highlight = Brush.radialGradient(
-                                        colors = if (isDark) {
-                                            listOf(
-                                                Color.White.copy(alpha = 0.08f),
-                                                Color.Transparent
-                                            )
-                                        } else {
-                                            listOf(
-                                                Color.White.copy(alpha = 0.5f),
-                                                Color.Transparent
-                                            )
-                                        },
-                                        center = Offset(size.width * 0.3f, size.height * 0.3f),
-                                        radius = size.width * 0.4f
-                                    )
-                                    drawRect(highlight)
-                                }
-                            }
-                            .clickable { onTitleClick() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .widthIn(max = 240.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = title.ifEmpty { "New chat" },
                                 color = textColor,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                             )
+
                             Spacer(Modifier.width(4.dp))
+
+                            // Static chevron
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowDown,
                                 contentDescription = "Open model settings",
                                 tint = textColor.copy(alpha = 0.6f),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
                 }
             } else {
-                // Non-clickable title (original behavior)
+                // Non-clickable title
                 Text(
                     text = title.ifEmpty { "New chat" },
                     color = textColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier
                         .weight(1f)
                         .basicMarquee(iterations = Int.MAX_VALUE),
@@ -197,36 +157,36 @@ fun ChatHeader(
 
             Spacer(Modifier.width(8.dp))
 
-            // Right action button with animated swap (hidden for guests)
-            // Priority: Incognito active > New Chat > Incognito (inactive)
+            // Right action buttons - compact, no animations
             if (!isGuest) {
                 val targetIcon = when {
                     isIncognitoActive -> "incognito_active"
                     isNewChat -> "incognito"
                     else -> "new"
                 }
+
                 Crossfade(
                     targetState = targetIcon,
                     animationSpec = tween(
-                        durationMillis = InnovexiaTokens.Motion.Fast,
-                        easing = LinearOutSlowInEasing
+                        durationMillis = 200,
+                        easing = FastOutSlowInEasing
                     ),
                     label = "headerActionSwap"
                 ) { state ->
                     when (state) {
-                        "incognito_active" -> GlassIconButton(
+                        "incognito_active" -> CompactGlassIconButton(
                             icon = painterResource(R.drawable.ic_incognito_24),
                             contentDesc = "Incognito (Local Only)",
                             onClick = { /* No action - incognito is permanent */ },
-                            showAccentDot = true // Show dot to indicate active state
+                            showAccentDot = true
                         )
-                        "incognito" -> GlassIconButton(
+                        "incognito" -> CompactGlassIconButton(
                             icon = painterResource(R.drawable.ic_incognito_24),
                             contentDesc = "Enable Incognito",
                             onClick = onIncognito,
                             showAccentDot = false
                         )
-                        else -> GlassIconButton(
+                        else -> CompactGlassIconButton(
                             icon = painterResource(R.drawable.ic_add_chat_24),
                             contentDesc = "New Chat",
                             onClick = onNewChat,
