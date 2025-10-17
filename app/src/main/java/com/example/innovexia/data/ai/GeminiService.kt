@@ -953,9 +953,10 @@ class GeminiService(
         val isGuest = Firebase.auth.currentUser == null
         val messageCount = database?.messageDao()?.lastN(chatId, 500)?.size ?: 0
         val memoryEngineLocal = memoryEngine
+        val userId = Firebase.auth.currentUser?.uid ?: com.example.innovexia.core.auth.ProfileId.GUEST_OWNER_ID
         val availableMemoryCount = if (persona != null && !isGuest && memoryEngineLocal != null) {
             try {
-                memoryEngineLocal.getCount(persona.id)
+                memoryEngineLocal.getCount(persona.id, userId)
             } catch (e: Exception) {
                 0
             }

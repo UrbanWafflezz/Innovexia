@@ -71,6 +71,18 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             // Re-seed Inno persona for new user
             seedInnoPersonaForCurrentUser()
 
+            // DEBUG: Log all memories in database after login
+            viewModelScope.launch {
+                try {
+                    val memoryEngine = com.example.innovexia.memory.Mind.di.MindModule.provideMemoryEngine(getApplication())
+                    if (memoryEngine is com.example.innovexia.memory.Mind.MemoryEngineImpl) {
+                        memoryEngine.debugLogAllMemories()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("AuthViewModel", "Error logging memories", e)
+                }
+            }
+
             // Check for guest chats to merge
             checkForGuestChats()
         } else {
@@ -122,11 +134,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             personaPrefs.clearForOwner(currentOwnerId)
             android.util.Log.d("AuthViewModel", "Cleared persona preferences for $currentOwnerId")
 
-            // Clear memory preferences
+            // Clear memory preferences (but NOT actual memories - they should persist)
             val memoryEngine = com.example.innovexia.memory.Mind.di.MindModule.provideMemoryEngine(getApplication())
             if (memoryEngine is com.example.innovexia.memory.Mind.MemoryEngineImpl) {
+                // Clear memory preferences (DataStore flags)
                 memoryEngine.clearAllPreferencesForOwner(currentOwnerId)
                 android.util.Log.d("AuthViewModel", "Cleared memory preferences for $currentOwnerId")
+
+                // NOTE: We do NOT delete actual memories on logout - they should persist
+                // and only be visible when the same user logs back in
             }
         } catch (e: Exception) {
             android.util.Log.e("AuthViewModel", "Error clearing user data on logout", e)

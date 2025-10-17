@@ -3,6 +3,7 @@ package com.example.innovexia.ui.persona.memory
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.innovexia.core.auth.FirebaseAuthManager
 import com.example.innovexia.memory.Mind.api.MemoryEngine
 import com.example.innovexia.memory.Mind.api.MemoryKind
 import com.example.innovexia.memory.Mind.di.MindModule
@@ -19,6 +20,14 @@ class MemoryViewModel(application: Application) : AndroidViewModel(application) 
     private val _personaId = MutableStateFlow<String?>(null)
     private val _selectedCategory = MutableStateFlow(MemoryCategory.All)
     private val _searchQuery = MutableStateFlow("")
+
+    /**
+     * Get current user ID from Firebase Auth
+     */
+    private fun getCurrentUserId(): String {
+        return FirebaseAuthManager.currentUser()?.uid
+            ?: com.example.innovexia.core.auth.ProfileId.GUEST_OWNER_ID
+    }
 
     /**
      * Set current persona
@@ -45,7 +54,8 @@ class MemoryViewModel(application: Application) : AndroidViewModel(application) 
      * Observe category counts
      */
     fun observeCounts(personaId: String): Flow<List<CategorySummary>> {
-        return memoryEngine.observeCounts(personaId).map { counts ->
+        val userId = getCurrentUserId()
+        return memoryEngine.observeCounts(personaId, userId).map { counts ->
             counts.map { count ->
                 CategorySummary(
                     category = count.kind.toUiCategory(),
@@ -63,10 +73,11 @@ class MemoryViewModel(application: Application) : AndroidViewModel(application) 
         category: MemoryCategory,
         searchQuery: String
     ): Flow<List<MemoryItem>> {
+        val userId = getCurrentUserId()
         val kind = if (category == MemoryCategory.All) null else category.toApiKind()
         val query = searchQuery.ifBlank { null }
 
-        return memoryEngine.feed(personaId, kind, query).map { hits ->
+        return memoryEngine.feed(personaId, userId, kind, query).map { hits ->
             hits.map { hit ->
                 MemoryItem(
                     id = hit.memory.id,

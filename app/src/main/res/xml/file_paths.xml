@@ -3,6 +3,9 @@
     <!-- Cache directory for downloaded APK files -->
     <cache-path name="apk_cache" path="apk/" />
 
+    <!-- Cache directory for camera images -->
+    <cache-path name="camera_images" path="." />
+
     <!-- External cache directory (fallback) -->
     <external-cache-path name="external_apk_cache" path="apk/" />
 </paths>

@@ -28,7 +28,7 @@ class UsageDataRepository(
      * Memory data stays local - we only count it
      */
     fun observeTotalMemoryCount(): Flow<Int> {
-        return memoryDatabase.memoryDao().observeTotalCount()
+        return memoryDatabase.memoryDao().observeTotalCountForUser(ownerId)
     }
 
     /**
@@ -58,7 +58,7 @@ class UsageDataRepository(
      * Get current memory count (suspend version)
      */
     suspend fun getTotalMemoryCount(): Int {
-        return memoryDatabase.memoryDao().getTotalCount()
+        return memoryDatabase.memoryDao().getTotalCountForUser(ownerId)
     }
 
     /**

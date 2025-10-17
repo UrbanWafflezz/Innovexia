@@ -158,7 +158,8 @@ class RealHealthApi(
 
             // Test memory database by getting count for test persona
             val testPersonaId = "health-check-test"
-            val count = memoryEngine.getCount(testPersonaId)
+            val testUserId = "health-check-user"
+            val count = memoryEngine.getCount(testPersonaId, testUserId)
 
             // Test embedder availability
             val embedder = com.example.innovexia.memory.Mind.di.MindModule.provideEmbedder(768, context)

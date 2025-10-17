@@ -57,6 +57,16 @@ object PermissionHelper {
     }
 
     /**
+     * Check if camera permission is granted
+     */
+    fun hasCameraPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
      * Get a single location update with coarse accuracy
      */
     suspend fun getCurrentLocation(context: Context): Location? {
@@ -123,6 +133,19 @@ fun rememberAudioPermissionLauncher(
 }
 
 /**
+ * Composable to request camera permission
+ */
+@Composable
+fun rememberCameraPermissionLauncher(
+    onPermissionResult: (Boolean) -> Unit
+): ManagedActivityResultLauncher<String, Boolean> {
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = onPermissionResult
+    )
+}
+
+/**
  * State holder for permission dialogs
  */
 @Stable
@@ -130,6 +153,7 @@ class PermissionState {
     var showLocationRationale by mutableStateOf(false)
     var showPhotoRationale by mutableStateOf(false)
     var showAudioRationale by mutableStateOf(false)
+    var showCameraRationale by mutableStateOf(false)
 }
 
 @Composable

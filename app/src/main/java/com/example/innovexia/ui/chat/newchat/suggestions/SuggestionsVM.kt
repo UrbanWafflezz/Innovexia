@@ -166,8 +166,10 @@ class SuggestionsVM @Inject constructor(
             }
 
             // 1) Pull high-signal memories from last 14 days
+            val userId = com.example.innovexia.core.auth.ProfileId.current().toOwnerId()
             val memories = memoryEngine.feed(
                 personaId = persona.id,
+                userId = userId,
                 kind = null,
                 query = null
             )
@@ -244,8 +246,10 @@ class SuggestionsVM @Inject constructor(
 
             // 1) Pull high-signal memories from last 14 days
             android.util.Log.d("SuggestionsVM", "🔍 Fetching memories for persona ${effectivePersona.id}...")
+            val userId = com.example.innovexia.core.auth.ProfileId.current().toOwnerId()
             val memories = memoryEngine.feed(
                 personaId = effectivePersona.id,
+                userId = userId,
                 kind = null,
                 query = null
             )

@@ -19,29 +19,35 @@ interface MemoryDao {
     @Query("SELECT * FROM memories WHERE id = :id")
     suspend fun getById(id: String): MemoryEntity?
 
-    @Query("SELECT * FROM memories WHERE personaId = :personaId ORDER BY createdAt DESC LIMIT :limit")
-    suspend fun getRecent(personaId: String, limit: Int): List<MemoryEntity>
+    @Query("SELECT * FROM memories WHERE personaId = :personaId AND userId = :userId ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun getRecent(personaId: String, userId: String, limit: Int): List<MemoryEntity>
 
-    @Query("SELECT * FROM memories WHERE personaId = :personaId AND chatId = :chatId ORDER BY createdAt DESC LIMIT :limit")
-    suspend fun getRecentForChat(personaId: String, chatId: String, limit: Int): List<MemoryEntity>
+    @Query("SELECT * FROM memories WHERE personaId = :personaId AND userId = :userId AND chatId = :chatId ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun getRecentForChat(personaId: String, userId: String, chatId: String, limit: Int): List<MemoryEntity>
 
-    @Query("SELECT * FROM memories WHERE personaId = :personaId ORDER BY createdAt DESC")
-    fun observeAll(personaId: String): Flow<List<MemoryEntity>>
+    @Query("SELECT * FROM memories WHERE personaId = :personaId AND userId = :userId ORDER BY createdAt DESC")
+    fun observeAll(personaId: String, userId: String): Flow<List<MemoryEntity>>
 
-    @Query("SELECT * FROM memories WHERE personaId = :personaId AND kind = :kind ORDER BY createdAt DESC")
-    fun observeByKind(personaId: String, kind: String): Flow<List<MemoryEntity>>
+    @Query("SELECT * FROM memories WHERE personaId = :personaId AND userId = :userId AND kind = :kind ORDER BY createdAt DESC")
+    fun observeByKind(personaId: String, userId: String, kind: String): Flow<List<MemoryEntity>>
 
-    @Query("SELECT kind, COUNT(*) as count FROM memories WHERE personaId = :personaId GROUP BY kind")
-    fun observeCountsByKind(personaId: String): Flow<List<KindCount>>
+    @Query("SELECT kind, COUNT(*) as count FROM memories WHERE personaId = :personaId AND userId = :userId GROUP BY kind")
+    fun observeCountsByKind(personaId: String, userId: String): Flow<List<KindCount>>
 
-    @Query("SELECT COUNT(*) FROM memories WHERE personaId = :personaId")
-    suspend fun getCount(personaId: String): Int
+    @Query("SELECT COUNT(*) FROM memories WHERE personaId = :personaId AND userId = :userId")
+    suspend fun getCount(personaId: String, userId: String): Int
 
     @Query("SELECT COUNT(*) FROM memories")
     suspend fun getTotalCount(): Int
 
     @Query("SELECT COUNT(*) FROM memories")
     fun observeTotalCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM memories WHERE userId = :userId")
+    suspend fun getTotalCountForUser(userId: String): Int
+
+    @Query("SELECT COUNT(*) FROM memories WHERE userId = :userId")
+    fun observeTotalCountForUser(userId: String): Flow<Int>
 
     @Query("UPDATE memories SET lastAccessed = :timestamp WHERE id IN (:ids)")
     suspend fun updateLastAccessed(ids: List<String>, timestamp: Long)
@@ -54,6 +60,15 @@ interface MemoryDao {
 
     @Query("DELETE FROM memories WHERE personaId = :personaId AND createdAt < :beforeTimestamp AND importance < :minImportance")
     suspend fun pruneLowImportance(personaId: String, beforeTimestamp: Long, minImportance: Double): Int
+
+    @Query("DELETE FROM memories WHERE userId = :userId")
+    suspend fun deleteAllForUser(userId: String)
+
+    @Query("DELETE FROM memories WHERE userId != :userId")
+    suspend fun deleteAllNotForUser(userId: String): Int
+
+    @Query("SELECT * FROM memories")
+    suspend fun getAllMemories(): List<MemoryEntity>
 }
 
 /**

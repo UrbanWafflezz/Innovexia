@@ -30,9 +30,9 @@ class Ingestor(
         val memories = mutableListOf<MemoryEntity>()
         val vectors = mutableListOf<MemoryVectorEntity>()
 
-        // Process user message
+        // Process user message (save ALL messages, no filtering)
         android.util.Log.d("Ingestor", "User message: '${turn.userMessage}' (length=${turn.userMessage.length})")
-        if (!Normalizers.isTooShort(turn.userMessage) && !Normalizers.isGreeting(turn.userMessage)) {
+        if (turn.userMessage.isNotBlank()) {
             val userMem = createMemory(
                 text = turn.userMessage,
                 role = "user",
@@ -48,12 +48,12 @@ class Ingestor(
             vectorDao.insert(userVec)
             android.util.Log.d("Ingestor", "Saved user memory: id=${userMem.id}, dim=${userVec.dim}")
         } else {
-            android.util.Log.d("Ingestor", "User message filtered out (too short or greeting)")
+            android.util.Log.d("Ingestor", "User message is blank, skipping")
         }
 
-        // Process assistant message if present
+        // Process assistant message if present (save ALL messages, no filtering)
         turn.assistantMessage?.let { assistantMsg ->
-            if (!Normalizers.isTooShort(assistantMsg) && !Normalizers.isGreeting(assistantMsg)) {
+            if (assistantMsg.isNotBlank()) {
                 val assistantMem = createMemory(
                     text = assistantMsg,
                     role = "model",
@@ -69,7 +69,7 @@ class Ingestor(
                 vectorDao.insert(assistantVec)
                 android.util.Log.d("Ingestor", "Saved assistant memory: id=${assistantMem.id}, dim=${assistantVec.dim}")
             } else {
-                android.util.Log.d("Ingestor", "Assistant message filtered out (too short or greeting)")
+                android.util.Log.d("Ingestor", "Assistant message is blank, skipping")
             }
         }
         android.util.Log.d("Ingestor", "Ingestion complete")

@@ -19,11 +19,10 @@ import kotlinx.coroutines.launch
 
 /**
  * Profile tab enum
+ * Note: Security has been merged into Profile tab
  */
 enum class ProfileTab(val title: String) {
     Profile("Profile"),
-    Usage("Usage"),
-    Security("Security"),
     CloudSync("Cloud Sync")
 }
 

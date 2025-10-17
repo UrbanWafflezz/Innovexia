@@ -30,8 +30,8 @@ class UpdateChecker(private val context: Context) {
         private const val KEY_FIRST_DETECTED = "first_detected_timestamp"
         private const val KEY_DETECTED_VERSION = "detected_version"
 
-        // Check for updates at most once per hour
-        private const val CHECK_INTERVAL_MS = 60 * 60 * 1000L // 1 hour
+        // Check for updates at most once per 15 minutes
+        private const val CHECK_INTERVAL_MS = 15 * 60 * 1000L // 15 minutes
 
         // Force update after 7 days of first detection
         private const val FORCE_UPDATE_AFTER_MS = 7 * 24 * 60 * 60 * 1000L // 7 days
@@ -62,23 +62,39 @@ class UpdateChecker(private val context: Context) {
     }
 
     /**
-     * Check for updates from GitHub Releases API
-     * Returns UpdateInfo if update is available, null otherwise
+     * Result of an update check
      */
-    suspend fun checkForUpdates(): UpdateInfo? = withContext(Dispatchers.IO) {
+    sealed class UpdateCheckResult {
+        data class UpdateAvailable(val updateInfo: UpdateInfo) : UpdateCheckResult()
+        object NoUpdateAvailable : UpdateCheckResult()
+        data class Error(val message: String, val exception: Throwable? = null) : UpdateCheckResult()
+    }
+
+    /**
+     * Check for updates from GitHub Releases API
+     * Returns UpdateCheckResult with detailed status
+     */
+    suspend fun checkForUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "Checking for updates from GitHub...")
 
             val response = api.getLatestRelease(OWNER, REPO)
 
             if (!response.isSuccessful) {
+                val errorMsg = when (response.code()) {
+                    403 -> "GitHub API rate limit exceeded. Try again later."
+                    404 -> "No releases found for this app."
+                    429 -> "Too many requests. Please wait before checking again."
+                    in 500..599 -> "GitHub server error. Try again later."
+                    else -> "Failed to check for updates (HTTP ${response.code()})"
+                }
                 Log.e(TAG, "Failed to fetch releases: ${response.code()}")
-                return@withContext null
+                return@withContext UpdateCheckResult.Error(errorMsg)
             }
 
             val release = response.body() ?: run {
                 Log.e(TAG, "Empty response body")
-                return@withContext null
+                return@withContext UpdateCheckResult.Error("Empty response from GitHub")
             }
 
             // Update last checked timestamp
@@ -91,7 +107,13 @@ class UpdateChecker(private val context: Context) {
 
             // Find APK asset in release
             val apkAsset = release.assets.firstOrNull { it.name.endsWith(".apk") }
-            val downloadUrl = apkAsset?.downloadUrl ?: release.htmlUrl
+
+            if (apkAsset == null) {
+                Log.w(TAG, "No APK file found in release assets")
+                return@withContext UpdateCheckResult.Error("No APK file available for download")
+            }
+
+            val downloadUrl = apkAsset.downloadUrl
 
             val updateInfo = UpdateInfo(
                 currentVersion = currentVersion,
@@ -99,7 +121,7 @@ class UpdateChecker(private val context: Context) {
                 downloadUrl = downloadUrl,
                 releaseNotes = release.body,
                 releasePageUrl = release.htmlUrl,
-                apkSize = apkAsset?.size
+                apkSize = apkAsset.size
             )
 
             if (updateInfo.isUpdateAvailable) {
@@ -117,15 +139,22 @@ class UpdateChecker(private val context: Context) {
                     Log.d(TAG, "First time detecting version $latestVersion")
                 }
 
-                return@withContext updateInfo
+                return@withContext UpdateCheckResult.UpdateAvailable(updateInfo)
             } else {
                 Log.d(TAG, "Already on latest version")
-                return@withContext null
+                return@withContext UpdateCheckResult.NoUpdateAvailable
             }
 
         } catch (e: Exception) {
+            val errorMsg = when {
+                e.message?.contains("Unable to resolve host") == true ->
+                    "No internet connection. Please check your network."
+                e.message?.contains("timeout") == true ->
+                    "Connection timeout. Please try again."
+                else -> "Error checking for updates: ${e.message ?: "Unknown error"}"
+            }
             Log.e(TAG, "Error checking for updates", e)
-            return@withContext null
+            return@withContext UpdateCheckResult.Error(errorMsg, e)
         }
     }
 

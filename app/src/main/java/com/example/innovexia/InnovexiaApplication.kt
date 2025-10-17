@@ -50,11 +50,11 @@ private class StubMemoryEngine : MemoryEngine {
             totalTokens = 0
         )
     }
-    override fun observeCounts(personaId: String): Flow<List<CategoryCount>> = flowOf(emptyList())
-    override fun feed(personaId: String, kind: MemoryKind?, query: String?): Flow<List<MemoryHit>> = flowOf(emptyList())
+    override fun observeCounts(personaId: String, userId: String): Flow<List<CategoryCount>> = flowOf(emptyList())
+    override fun feed(personaId: String, userId: String, kind: MemoryKind?, query: String?): Flow<List<MemoryHit>> = flowOf(emptyList())
     override suspend fun delete(memoryId: String) {}
     override suspend fun deleteAll(personaId: String) {}
-    override suspend fun getCount(personaId: String): Int = 0
+    override suspend fun getCount(personaId: String, userId: String): Int = 0
 }
 
 /**
@@ -200,6 +200,7 @@ class InnovexiaApplication : Application() {
 
         scheduleHealthMonitoring()
         scheduleEntitlementChecks()
+        scheduleUpdateChecks()
         seedInnoPersona()
     }
 
@@ -281,5 +282,33 @@ class InnovexiaApplication : Application() {
             ExistingPeriodicWorkPolicy.KEEP,
             workRequest
         )
+    }
+
+    /**
+     * Schedule periodic update checks (every 12 hours)
+     */
+    private fun scheduleUpdateChecks() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val updateWorkRequest = PeriodicWorkRequestBuilder<com.example.innovexia.core.update.UpdateWorker>(
+            12, TimeUnit.HOURS // Check for updates every 12 hours
+        )
+            .setConstraints(constraints)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                WorkRequest.MIN_BACKOFF_MILLIS,
+                TimeUnit.MILLISECONDS
+            )
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.example.innovexia.core.update.UpdateWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            updateWorkRequest
+        )
+
+        android.util.Log.d("InnovexiaApplication", "Scheduled background update checks (every 12 hours)")
     }
 }

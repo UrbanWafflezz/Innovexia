@@ -365,10 +365,6 @@ fun ChatScreen(
                     showAttachmentToolbar = false
                     Toast.makeText(context, "Camera - wire to launcher", Toast.LENGTH_SHORT).show()
                 },
-                onScanPdf = {
-                    showAttachmentToolbar = false
-                    Toast.makeText(context, "Scan PDF - wire to launcher", Toast.LENGTH_SHORT).show()
-                },
                 groundingEnabled = groundingEnabled,
                 onGroundingToggle = { enabled ->
                     Toast.makeText(context, "Grounding toggle: $enabled", Toast.LENGTH_SHORT).show()

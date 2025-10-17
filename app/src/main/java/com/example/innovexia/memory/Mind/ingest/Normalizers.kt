@@ -30,19 +30,30 @@ object Normalizers {
 
     /**
      * Check if text is too short to be meaningful
+     * Changed from 3 words to 2 words minimum to be less strict
      */
     fun isTooShort(text: String): Boolean {
-        return text.trim().split("\\s+".toRegex()).size < 3
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return true
+        val wordCount = trimmed.split("\\s+".toRegex()).size
+        return wordCount < 2 // Changed from 3 to 2
     }
 
     /**
      * Check if text is just a greeting/farewell
+     * Only filters out single-word greetings/simple responses
      */
     fun isGreeting(text: String): Boolean {
-        val lower = text.lowercase().trim()
+        val trimmed = text.trim()
+        val lower = trimmed.lowercase()
+        val wordCount = trimmed.split("\\s+".toRegex()).size
+
+        // Only filter single-word simple greetings
+        if (wordCount > 1) return false
+
         val greetings = setOf(
-            "hi", "hello", "hey", "goodbye", "bye", "thanks", "thank you",
-            "ok", "okay", "sure", "yes", "no", "got it"
+            "hi", "hello", "hey", "goodbye", "bye", "thanks",
+            "ok", "okay", "sure", "yes", "no"
         )
         return greetings.contains(lower)
     }

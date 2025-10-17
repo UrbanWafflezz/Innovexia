@@ -33,7 +33,8 @@ interface MemoryFtsDao {
         JOIN memories ON memories.id = memories_fts.id
         WHERE memories_fts MATCH :query
         AND memories.personaId = :personaId
+        AND memories.userId = :userId
         LIMIT :limit
     """)
-    suspend fun search(personaId: String, query: String, limit: Int): List<String>
+    suspend fun search(personaId: String, userId: String, query: String, limit: Int): List<String>
 }

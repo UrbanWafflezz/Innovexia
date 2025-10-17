@@ -18,19 +18,20 @@ class ContextBuilder(
     suspend fun contextFor(
         message: String,
         personaId: String,
+        userId: String,
         chatId: String,
         maxTokens: Int = 2000
     ): ContextBundle {
-        // Get short-term: ALL recent turns from THIS specific chat
+        // Get short-term: ALL recent turns from THIS specific chat for THIS user
         // INCREASED: From 10 to 100 to ensure comprehensive context
-        val shortTerm = memoryDao.getRecentForChat(personaId, chatId, limit = 100)
+        val shortTerm = memoryDao.getRecentForChat(personaId, userId, chatId, limit = 100)
             .map { it.toMemory() }
 
-        android.util.Log.d("ContextBuilder", "Retrieved ${shortTerm.size} short-term memories for persona=$personaId, chat=$chatId")
+        android.util.Log.d("ContextBuilder", "Retrieved ${shortTerm.size} short-term memories for persona=$personaId, user=$userId, chat=$chatId")
 
-        // Get long-term: retrieved relevant memories across ALL chats
+        // Get long-term: retrieved relevant memories across ALL chats for THIS user
         // INCREASED: From 12 to 50 to capture more context
-        val longTerm = retriever.recall(personaId, message, k = 50)
+        val longTerm = retriever.recall(personaId, userId, message, k = 50)
 
         android.util.Log.d("ContextBuilder", "Retrieved ${longTerm.size} long-term memories via hybrid search")
 

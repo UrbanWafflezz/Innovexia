@@ -53,8 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.innovexia.InnovexiaApplication
-import com.example.innovexia.ui.glass.GlassButton
-import com.example.innovexia.ui.glass.GlassButtonStyle
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Color
 import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.ui.sheets.CloudRestoreSheet
 import com.example.innovexia.ui.viewmodels.AuthViewModel
@@ -171,8 +174,16 @@ fun CloudSyncTab(
                         onCheckedChange = { cloudSyncVm.toggleSync(it) },
                         enabled = signedIn && !syncInProgress,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = InnovexiaColors.BlueAccent,
-                            checkedTrackColor = InnovexiaColors.BlueAccent.copy(alpha = 0.5f)
+                            checkedThumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                            checkedTrackColor = if (darkTheme) Color(0xFF60A5FA).copy(alpha = 0.5f) else Color(0xFF3B82F6).copy(alpha = 0.5f),
+                            checkedBorderColor = Color.Transparent,
+                            uncheckedThumbColor = if (darkTheme) Color(0xFF64748B) else Color(0xFF94A3B8),
+                            uncheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                            uncheckedBorderColor = Color.Transparent,
+                            disabledCheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                            disabledCheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                            disabledUncheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                            disabledUncheckedTrackColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                         )
                     )
                 }
@@ -194,8 +205,16 @@ fun CloudSyncTab(
                             },
                             enabled = signedIn && syncEnabled,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = InnovexiaColors.BlueAccent,
-                                checkedTrackColor = InnovexiaColors.BlueAccent.copy(alpha = 0.5f)
+                                checkedThumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                                checkedTrackColor = if (darkTheme) Color(0xFF60A5FA).copy(alpha = 0.5f) else Color(0xFF3B82F6).copy(alpha = 0.5f),
+                                checkedBorderColor = Color.Transparent,
+                                uncheckedThumbColor = if (darkTheme) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                uncheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                                uncheckedBorderColor = Color.Transparent,
+                                disabledCheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                                disabledCheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                                disabledUncheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                                disabledUncheckedTrackColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                             )
                         )
                     }
@@ -218,8 +237,16 @@ fun CloudSyncTab(
                             },
                             enabled = signedIn,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = InnovexiaColors.BlueAccent,
-                                checkedTrackColor = InnovexiaColors.BlueAccent.copy(alpha = 0.5f)
+                                checkedThumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                                checkedTrackColor = if (darkTheme) Color(0xFF60A5FA).copy(alpha = 0.5f) else Color(0xFF3B82F6).copy(alpha = 0.5f),
+                                checkedBorderColor = Color.Transparent,
+                                uncheckedThumbColor = if (darkTheme) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                uncheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                                uncheckedBorderColor = Color.Transparent,
+                                disabledCheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                                disabledCheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                                disabledUncheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                                disabledUncheckedTrackColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                             )
                         )
                     }
@@ -300,40 +327,63 @@ fun CloudSyncTab(
 
             // Manual sync button
             if (syncEnabled && !syncInProgress) {
-                GlassButton(
-                    text = "Sync Now",
+                Button(
                     onClick = { cloudSyncVm.manualSync() },
-                    style = GlassButtonStyle.Primary,
-                    modifier = Modifier.fillMaxWidth(),
-                    darkTheme = darkTheme,
-                    leading = {
-                        Icon(
-                            imageVector = Icons.Rounded.Refresh,
-                            contentDescription = "Sync",
-                            tint = InnovexiaColors.White,
-                            modifier = Modifier.size(20.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Sync",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text(
+                        text = "Sync Now",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
-                )
+                    )
+                }
             }
 
             // Restore from cloud button
             if (signedIn && !syncInProgress) {
-                GlassButton(
-                    text = "Restore from Cloud",
+                OutlinedButton(
                     onClick = { showRestoreSheet = true },
-                    style = GlassButtonStyle.Secondary,
-                    modifier = Modifier.fillMaxWidth(),
-                    darkTheme = darkTheme,
-                    leading = {
-                        Icon(
-                            imageVector = Icons.Rounded.CloudDownload,
-                            contentDescription = "Restore",
-                            tint = InnovexiaColors.BlueAccent,
-                            modifier = Modifier.size(20.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+                    ),
+                    border = BorderStroke(
+                        1.5.dp,
+                        if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CloudDownload,
+                        contentDescription = "Restore",
+                        tint = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text(
+                        text = "Restore from Cloud",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
-                )
+                    )
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -369,25 +419,37 @@ fun CloudSyncTab(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = InnovexiaColors.Error
+                    color = Color(0xFFFF3B30)
                 )
 
-                GlassButton(
-                    text = "Delete Cloud Data",
+                Button(
                     onClick = { showDeleteDialog = true },
-                    style = GlassButtonStyle.Danger,
-                    modifier = Modifier.fillMaxWidth(),
-                    darkTheme = darkTheme,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     enabled = signedIn && syncEnabled && !syncInProgress,
-                    leading = {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = "Delete",
-                            tint = InnovexiaColors.White,
-                            modifier = Modifier.size(20.dp)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF3B30),
+                        contentColor = Color.White,
+                        disabledContainerColor = if (darkTheme) Color(0xFF334155) else Color(0xFFCBD5E1),
+                        disabledContentColor = if (darkTheme) Color(0xFF64748B) else Color(0xFF94A3B8)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text(
+                        text = "Delete Cloud Data",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
-                )
+                    )
+                }
             }
         }
 
@@ -429,23 +491,44 @@ fun CloudSyncTab(
                 )
             },
             confirmButton = {
-                GlassButton(
-                    text = "Delete",
+                Button(
                     onClick = {
                         cloudSyncVm.deleteCloudData()
                         showDeleteDialog = false
                     },
-                    style = GlassButtonStyle.Danger,
-                    darkTheme = darkTheme
-                )
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF3B30),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Delete",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
             },
             dismissButton = {
-                GlassButton(
-                    text = "Cancel",
+                OutlinedButton(
                     onClick = { showDeleteDialog = false },
-                    style = GlassButtonStyle.Secondary,
-                    darkTheme = darkTheme
-                )
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+                    ),
+                    border = BorderStroke(
+                        1.5.dp,
+                        if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
             }
         )
     }

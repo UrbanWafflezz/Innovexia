@@ -22,8 +22,9 @@ interface VectorDao {
         SELECT mv.* FROM memory_vectors mv
         JOIN memories m ON mv.memoryId = m.id
         WHERE m.personaId = :personaId
+        AND m.userId = :userId
     """)
-    suspend fun getAllByPersona(personaId: String): List<MemoryVectorEntity>
+    suspend fun getAllByPersona(personaId: String, userId: String): List<MemoryVectorEntity>
 
     @Query("DELETE FROM memory_vectors WHERE memoryId = :memoryId")
     suspend fun deleteByMemoryId(memoryId: String)

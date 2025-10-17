@@ -12,10 +12,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
@@ -49,6 +53,7 @@ class MainActivity : ComponentActivity() {
 
     private var updateInfo by mutableStateOf<UpdateInfo?>(null)
     private var downloadState by mutableStateOf<ApkDownloader.DownloadState>(ApkDownloader.DownloadState.Idle)
+    private var updateCheckError by mutableStateOf<String?>(null)
 
     private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
         // Notify ProfileScopedRepository of auth changes
@@ -89,42 +94,65 @@ class MainActivity : ComponentActivity() {
         Firebase.auth.addAuthStateListener(authStateListener)
 
         setContent {
-            HomeScreen()
+            InnovexiaTheme {
+                androidx.compose.material3.Scaffold { paddingValues ->
+                    // Main content
+                    androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+                        HomeScreen()
 
-            // Show update dialog if update is available
-            updateInfo?.let { info ->
-                val forceUpdate = updateChecker.shouldForceUpdate()
-
-                UpdateAvailableDialog(
-                    updateInfo = info,
-                    downloadState = downloadState,
-                    forceUpdate = forceUpdate,
-                    onUpdateNow = {
-                        // Start in-app download
-                        downloadAndInstallUpdate(info.downloadUrl)
-                    },
-                    onRemindLater = { hours ->
-                        // Set remind later preference with custom duration
-                        if (hours == 0) {
-                            // Next app launch - clear remind later
-                            updateChecker.clearRemindLater()
-                        } else {
-                            // Set custom remind duration
-                            val durationMs = hours * 60 * 60 * 1000L
-                            updateChecker.setRemindLater(durationMs)
-                        }
-                        updateInfo = null
-                        downloadState = ApkDownloader.DownloadState.Idle
-                    },
-                    onDismiss = {
-                        // User closed dialog - only allow if not forced
-                        if (!forceUpdate) {
-                            updateChecker.clearRemindLater() // Show on next launch
-                            updateInfo = null
-                            downloadState = ApkDownloader.DownloadState.Idle
+                        // Show update error snackbar if there's an error
+                        updateCheckError?.let { errorMessage ->
+                            androidx.compose.material3.Snackbar(
+                                modifier = androidx.compose.ui.Modifier
+                                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                                    .padding(16.dp),
+                                action = {
+                                    androidx.compose.material3.TextButton(onClick = { updateCheckError = null }) {
+                                        androidx.compose.material3.Text("Dismiss")
+                                    }
+                                }
+                            ) {
+                                androidx.compose.material3.Text(errorMessage)
+                            }
                         }
                     }
-                )
+                }
+
+                // Show update dialog if update is available
+                updateInfo?.let { info ->
+                    val forceUpdate = updateChecker.shouldForceUpdate()
+
+                    UpdateAvailableDialog(
+                        updateInfo = info,
+                        downloadState = downloadState,
+                        forceUpdate = forceUpdate,
+                        onUpdateNow = {
+                            // Start in-app download
+                            downloadAndInstallUpdate(info.downloadUrl)
+                        },
+                        onRemindLater = { hours ->
+                            // Set remind later preference with custom duration
+                            if (hours == 0) {
+                                // Next app launch - clear remind later
+                                updateChecker.clearRemindLater()
+                            } else {
+                                // Set custom remind duration
+                                val durationMs = hours * 60 * 60 * 1000L
+                                updateChecker.setRemindLater(durationMs)
+                            }
+                            updateInfo = null
+                            downloadState = ApkDownloader.DownloadState.Idle
+                        },
+                        onDismiss = {
+                            // User closed dialog - only allow if not forced
+                            if (!forceUpdate) {
+                                updateChecker.clearRemindLater() // Show on next launch
+                                updateInfo = null
+                                downloadState = ApkDownloader.DownloadState.Idle
+                            }
+                        }
+                    )
+                }
             }
         }
 
@@ -224,22 +252,73 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Log.d("MainActivity", "Checking for updates... (forced: $forceUpdate)")
-                val update = updateChecker.checkForUpdates()
+                val result = updateChecker.checkForUpdates()
 
-                if (update != null) {
-                    Log.d("MainActivity", "Update available: ${update.latestVersion}")
-                    updateInfo = update
+                when (result) {
+                    is UpdateChecker.UpdateCheckResult.UpdateAvailable -> {
+                        val update = result.updateInfo
+                        Log.d("MainActivity", "Update available: ${update.latestVersion}")
+                        updateInfo = update
+                        updateCheckError = null
 
-                    // If forced update, automatically start download
-                    if (forceUpdate) {
-                        Log.d("MainActivity", "Force update triggered - auto-downloading")
-                        downloadAndInstallUpdate(update.downloadUrl)
+                        // If forced update, automatically start download
+                        if (forceUpdate) {
+                            Log.d("MainActivity", "Force update triggered - auto-downloading")
+                            downloadAndInstallUpdate(update.downloadUrl)
+                        }
                     }
-                } else {
-                    Log.d("MainActivity", "No update available")
+                    is UpdateChecker.UpdateCheckResult.NoUpdateAvailable -> {
+                        Log.d("MainActivity", "No update available")
+                        updateCheckError = null
+                    }
+                    is UpdateChecker.UpdateCheckResult.Error -> {
+                        Log.e("MainActivity", "Update check failed: ${result.message}", result.exception)
+                        updateCheckError = result.message
+                        // Show error for 10 seconds then clear
+                        lifecycleScope.launch {
+                            kotlinx.coroutines.delay(10000)
+                            updateCheckError = null
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error checking for updates", e)
+                updateCheckError = "Unexpected error: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Manual update check (can be called from settings or user action)
+     */
+    fun manualUpdateCheck() {
+        lifecycleScope.launch {
+            try {
+                Log.d("MainActivity", "Manual update check requested")
+                val result = updateChecker.checkForUpdates()
+
+                when (result) {
+                    is UpdateChecker.UpdateCheckResult.UpdateAvailable -> {
+                        updateInfo = result.updateInfo
+                        updateCheckError = null
+                    }
+                    is UpdateChecker.UpdateCheckResult.NoUpdateAvailable -> {
+                        updateCheckError = "You're on the latest version!"
+                        lifecycleScope.launch {
+                            kotlinx.coroutines.delay(3000)
+                            updateCheckError = null
+                        }
+                    }
+                    is UpdateChecker.UpdateCheckResult.Error -> {
+                        updateCheckError = result.message
+                        lifecycleScope.launch {
+                            kotlinx.coroutines.delay(10000)
+                            updateCheckError = null
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                updateCheckError = "Unexpected error: ${e.message}"
             }
         }
     }

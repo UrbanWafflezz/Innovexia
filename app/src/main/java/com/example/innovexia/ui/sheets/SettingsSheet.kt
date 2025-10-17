@@ -69,6 +69,8 @@ import com.example.innovexia.ui.models.ThemeMode
 import com.example.innovexia.ui.theme.DarkColors
 import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.ui.theme.LightColors
+import com.example.innovexia.ui.theme.getBackgroundGradient
+import androidx.compose.ui.draw.clip
 import com.example.innovexia.ui.viewmodels.AuthViewModel
 import com.example.innovexia.ui.viewmodels.SettingsTab
 import com.example.innovexia.ui.viewmodels.SettingsViewModel
@@ -106,11 +108,9 @@ fun SettingsDialog(
     } else {
         listOf(
             SettingsTab.Account,
-            SettingsTab.AI,
             SettingsTab.Privacy,
             SettingsTab.Notifications,
-            SettingsTab.SystemHealth,
-            SettingsTab.Help
+            SettingsTab.SystemHealth
         )
     }
 
@@ -122,19 +122,19 @@ fun SettingsDialog(
             usePlatformDefaultWidth = false
         )
     ) {
-        // Outer surface (rounded card)
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = if (darkTheme) Color(0xFF141A22) else Color.White,
-            tonalElevation = 0.dp,
-            border = BorderStroke(
-                1.dp,
-                if (darkTheme) Color(0xFF253041).copy(alpha = 0.6f) else Color(0xFFE7EDF5).copy(alpha = 0.6f)
-            ),
+        // Outer box with gradient background (matches side menu)
+        Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 24.dp)
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f) // Bounded height
+                .clip(RoundedCornerShape(20.dp))
+                .background(brush = getBackgroundGradient(darkTheme))
+                .border(
+                    1.dp,
+                    if (darkTheme) Color(0xFF253041).copy(alpha = 0.6f) else Color(0xFFE7EDF5).copy(alpha = 0.6f),
+                    RoundedCornerShape(20.dp)
+                )
                 .imePadding()
                 .navigationBarsPadding()
         ) {
@@ -197,11 +197,10 @@ fun SettingsDialog(
                                 authViewModel
                             )
                         }
-                        SettingsTab.AI -> AiTabBody(darkTheme)
                         SettingsTab.Privacy -> PrivacyTabBody(darkTheme, prefs, onPrefsChange)
                         SettingsTab.Notifications -> NotificationsTabBody(darkTheme)
                         SettingsTab.SystemHealth -> SystemHealthTabWrapper(darkTheme)
-                        SettingsTab.Help -> HelpTabBody(darkTheme)
+                        else -> {} // Handle any remaining tabs
                     }
                 }
             }
@@ -591,10 +590,14 @@ private fun AiTabBody(darkTheme: Boolean) {
                     steps = 6,
                     enabled = autoSummarize,
                     colors = SliderDefaults.colors(
-                        thumbColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                        activeTrackColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                        inactiveTrackColor = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.3f)
-                        else LightColors.SecondaryText.copy(alpha = 0.3f)
+                        thumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        activeTrackColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        inactiveTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                        activeTickColor = Color.Transparent,
+                        inactiveTickColor = Color.Transparent,
+                        disabledThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                        disabledActiveTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                        disabledInactiveTrackColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                     )
                 )
             }
@@ -620,10 +623,11 @@ private fun AiTabBody(darkTheme: Boolean) {
                     valueRange = 6f..24f,
                     steps = 5,
                     colors = SliderDefaults.colors(
-                        thumbColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                        activeTrackColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                        inactiveTrackColor = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.3f)
-                        else LightColors.SecondaryText.copy(alpha = 0.3f)
+                        thumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        activeTrackColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        inactiveTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                        activeTickColor = Color.Transparent,
+                        inactiveTickColor = Color.Transparent
                     )
                 )
             }
@@ -656,10 +660,11 @@ private fun AiTabBody(darkTheme: Boolean) {
                     valueRange = 512f..8192f,
                     steps = 7,
                     colors = SliderDefaults.colors(
-                        thumbColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                        activeTrackColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                        inactiveTrackColor = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.3f)
-                        else LightColors.SecondaryText.copy(alpha = 0.3f)
+                        thumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        activeTrackColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                        inactiveTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                        activeTickColor = Color.Transparent,
+                        inactiveTickColor = Color.Transparent
                     )
                 )
             }
@@ -928,9 +933,16 @@ private fun SettingsSwitchItem(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue,
-                    checkedTrackColor = if (darkTheme) DarkColors.AccentBlue.copy(alpha = 0.5f)
-                    else LightColors.AccentBlue.copy(alpha = 0.5f)
+                    checkedThumbColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                    checkedTrackColor = if (darkTheme) Color(0xFF60A5FA).copy(alpha = 0.5f) else Color(0xFF3B82F6).copy(alpha = 0.5f),
+                    checkedBorderColor = Color.Transparent,
+                    uncheckedThumbColor = if (darkTheme) Color(0xFF64748B) else Color(0xFF94A3B8),
+                    uncheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                    uncheckedBorderColor = Color.Transparent,
+                    disabledCheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                    disabledCheckedTrackColor = if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0),
+                    disabledUncheckedThumbColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1),
+                    disabledUncheckedTrackColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                 )
             )
         }

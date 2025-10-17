@@ -18,13 +18,13 @@ interface MemoryEngine {
     suspend fun contextFor(message: String, personaId: String, chatId: String): ContextBundle
 
     // UI queries
-    fun observeCounts(personaId: String): Flow<List<CategoryCount>>
-    fun feed(personaId: String, kind: MemoryKind?, query: String?): Flow<List<MemoryHit>>
+    fun observeCounts(personaId: String, userId: String): Flow<List<CategoryCount>>
+    fun feed(personaId: String, userId: String, kind: MemoryKind?, query: String?): Flow<List<MemoryHit>>
 
     // Management
     suspend fun delete(memoryId: String)
     suspend fun deleteAll(personaId: String)
 
     // Stats
-    suspend fun getCount(personaId: String): Int
+    suspend fun getCount(personaId: String, userId: String): Int
 }

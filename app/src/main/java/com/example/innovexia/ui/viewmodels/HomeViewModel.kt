@@ -507,27 +507,6 @@ class HomeViewModel(
                             } else msg
                         }
 
-                        // Ingest conversation turn to memory system
-                        if (!isIncognito && persona != null) {
-                            try {
-                                val turn = ChatTurn(
-                                    userId = currentProfileId.toOwnerId(),
-                                    chatId = chatId,
-                                    userMessage = userMessage,
-                                    assistantMessage = _streamingText.value,
-                                    timestamp = System.currentTimeMillis()
-                                )
-                                memoryEngine?.ingest(
-                                    turn = turn,
-                                    personaId = persona.id,
-                                    incognito = isIncognito
-                                )
-                                android.util.Log.d("HomeViewModel", "Memory ingested for persona ${persona.id}: user='${userMessage.take(50)}' assistant='${_streamingText.value.take(50)}'")
-                            } catch (e: Exception) {
-                                android.util.Log.e("HomeViewModel", "Failed to ingest memory", e)
-                            }
-                        }
-
                     } catch (e: Exception) {
                         android.util.Log.e("HomeViewModel", "Streaming error", e)
                         // Update message with error status - use COMPLETE with error text
@@ -555,6 +534,43 @@ class HomeViewModel(
                 }
 
                 streamingJob?.join()
+
+                // Ingest conversation turn to memory system (moved outside streaming job)
+                // This ensures memory is saved even if streaming errors occur
+                if (!isIncognito && persona != null && _streamingText.value.isNotEmpty()) {
+                    try {
+                        val userId = currentProfileId.toOwnerId()
+                        android.util.Log.d("HomeViewModel", "=== MEMORY INGESTION START ===")
+                        android.util.Log.d("HomeViewModel", "  userId: $userId")
+                        android.util.Log.d("HomeViewModel", "  personaId: ${persona.id}")
+                        android.util.Log.d("HomeViewModel", "  chatId: $chatId")
+                        android.util.Log.d("HomeViewModel", "  memoryEngine: ${if (memoryEngine != null) "initialized" else "NULL"}")
+
+                        if (memoryEngine == null) {
+                            android.util.Log.e("HomeViewModel", "❌ memoryEngine is NULL - cannot save memory!")
+                            return@launch
+                        }
+
+                        val turn = ChatTurn(
+                            userId = userId,
+                            chatId = chatId,
+                            userMessage = userMessage,
+                            assistantMessage = _streamingText.value,
+                            timestamp = System.currentTimeMillis()
+                        )
+                        memoryEngine?.ingest(
+                            turn = turn,
+                            personaId = persona.id,
+                            incognito = isIncognito
+                        )
+                        android.util.Log.d("HomeViewModel", "✅ Memory ingested successfully for persona ${persona.id}")
+                        android.util.Log.d("HomeViewModel", "  User message: '${userMessage.take(50)}'")
+                        android.util.Log.d("HomeViewModel", "  Assistant message: '${_streamingText.value.take(50)}'")
+                    } catch (e: Exception) {
+                        android.util.Log.e("HomeViewModel", "❌ Failed to ingest memory: ${e.message}", e)
+                    }
+                }
+
                 _streamingText.value = ""
 
                 // Update token counts from API response

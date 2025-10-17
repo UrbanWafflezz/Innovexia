@@ -27,6 +27,7 @@ class Retriever(
      */
     suspend fun recall(
         personaId: String,
+        userId: String,
         query: String,
         k: Int = config.kReturn
     ): List<MemoryHit> {
@@ -35,13 +36,13 @@ class Retriever(
 
         // Get candidates from FTS
         val ftsIds = try {
-            ftsDao.search(personaId, normalized, config.kFts)
+            ftsDao.search(personaId, userId, normalized, config.kFts)
         } catch (e: Exception) {
             emptyList()
         }
 
         // Get candidates from vector similarity
-        val vectorIds = getVectorCandidates(personaId, normalized, config.kVec)
+        val vectorIds = getVectorCandidates(personaId, userId, normalized, config.kVec)
 
         // Combine and deduplicate
         val allIds = (ftsIds + vectorIds).distinct()
@@ -89,6 +90,7 @@ class Retriever(
      */
     private suspend fun getVectorCandidates(
         personaId: String,
+        userId: String,
         query: String,
         k: Int
     ): List<String> {
@@ -96,7 +98,7 @@ class Retriever(
             val queryEmbedding = embedder.embed(query)
             val (queryQ8, queryScale) = Quantizer.quantize(queryEmbedding)
 
-            val allVectors = vectorDao.getAllByPersona(personaId)
+            val allVectors = vectorDao.getAllByPersona(personaId, userId)
             if (allVectors.isEmpty()) return emptyList()
 
             // Filter out vectors with mismatched dimensions (from old schema)

@@ -49,7 +49,12 @@ class MemoryEngineImpl(
     }
 
     override suspend fun ingest(turn: ChatTurn, personaId: String, incognito: Boolean) {
-        if (!isEnabled(personaId)) return
+        val enabled = isEnabled(personaId)
+        android.util.Log.d("MemoryEngineImpl", "ingest() called - personaId=$personaId, enabled=$enabled, incognito=$incognito")
+        if (!enabled) {
+            android.util.Log.w("MemoryEngineImpl", "Memory is DISABLED for persona $personaId - skipping ingestion")
+            return
+        }
         ingestor.ingest(turn, personaId, incognito)
     }
 
@@ -57,11 +62,16 @@ class MemoryEngineImpl(
         if (!isEnabled(personaId)) {
             return ContextBundle(emptyList(), emptyList(), 0)
         }
-        return contextBuilder.contextFor(message, personaId, chatId)
+
+        // Get userId from FirebaseAuth
+        val userId = com.example.innovexia.core.auth.FirebaseAuthManager.currentUser()?.uid
+            ?: com.example.innovexia.core.auth.ProfileId.GUEST_OWNER_ID
+
+        return contextBuilder.contextFor(message, personaId, userId, chatId)
     }
 
-    override fun observeCounts(personaId: String): Flow<List<CategoryCount>> {
-        return memoryDao.observeCountsByKind(personaId).map { kindCounts ->
+    override fun observeCounts(personaId: String, userId: String): Flow<List<CategoryCount>> {
+        return memoryDao.observeCountsByKind(personaId, userId).map { kindCounts ->
             kindCounts.map { kc ->
                 CategoryCount(
                     kind = MemoryKind.valueOf(kc.kind),
@@ -71,13 +81,13 @@ class MemoryEngineImpl(
         }
     }
 
-    override fun feed(personaId: String, kind: MemoryKind?, query: String?): Flow<List<MemoryHit>> {
+    override fun feed(personaId: String, userId: String, kind: MemoryKind?, query: String?): Flow<List<MemoryHit>> {
         // For now, return recent memories as Flow
         // TODO: Implement proper search with query
         val flow = if (kind != null) {
-            memoryDao.observeByKind(personaId, kind.name)
+            memoryDao.observeByKind(personaId, userId, kind.name)
         } else {
-            memoryDao.observeAll(personaId)
+            memoryDao.observeAll(personaId, userId)
         }
 
         return flow.map { entities ->
@@ -103,8 +113,10 @@ class MemoryEngineImpl(
         memoryDao.deleteAll(personaId)
     }
 
-    override suspend fun getCount(personaId: String): Int {
-        return memoryDao.getCount(personaId)
+    override suspend fun getCount(personaId: String, userId: String): Int {
+        val count = memoryDao.getCount(personaId, userId)
+        android.util.Log.d("MemoryEngineImpl", "getCount for personaId=$personaId, userId=$userId: $count")
+        return count
     }
 
     /**
@@ -125,6 +137,61 @@ class MemoryEngineImpl(
                 prefs.remove(key)
             }
         }
+    }
+
+    /**
+     * Clear all memories from the database for a specific owner/user.
+     * Used when signing out to ensure memories don't persist across different accounts.
+     * This deletes the actual memory data from Room database.
+     */
+    suspend fun clearAllMemoriesForOwner(ownerId: String) {
+        memoryDao.deleteAllForUser(ownerId)
+        android.util.Log.d("MemoryEngineImpl", "Cleared all memories for user: $ownerId")
+    }
+
+    /**
+     * Clear ALL memories from the database (all users).
+     * This is a nuclear option for debugging or manual cleanup.
+     * Clears all memory-related tables.
+     */
+    suspend fun clearAllMemories() {
+        val totalCount = memoryDao.getTotalCount()
+        android.util.Log.d("MemoryEngineImpl", "Clearing all memories (total: $totalCount)")
+
+        // Clear all tables in the memory database
+        database.clearAllTables()
+
+        android.util.Log.d("MemoryEngineImpl", "All memories cleared from database")
+    }
+
+    /**
+     * Delete all memories that don't belong to the specified userId.
+     * This is useful for cleaning up memories from other users that may be
+     * incorrectly visible due to missing or incorrect userId filtering.
+     */
+    suspend fun deleteMemoriesNotOwnedBy(userId: String): Int {
+        val totalBefore = memoryDao.getTotalCount()
+        android.util.Log.d("MemoryEngineImpl", "Cleaning memories not owned by user: $userId (total before: $totalBefore)")
+
+        val deletedCount = memoryDao.deleteAllNotForUser(userId)
+
+        val totalAfter = memoryDao.getTotalCount()
+        android.util.Log.d("MemoryEngineImpl", "Cleanup complete: deleted $deletedCount memories, remaining: $totalAfter")
+
+        return deletedCount
+    }
+
+    /**
+     * Debug function to log all memories in the database with their userIds.
+     * Useful for troubleshooting memory isolation issues.
+     */
+    suspend fun debugLogAllMemories() {
+        val allMemories = memoryDao.getAllMemories()
+        android.util.Log.d("MemoryEngineImpl", "=== DEBUG: All Memories in Database (total: ${allMemories.size}) ===")
+        allMemories.forEachIndexed { index, memory ->
+            android.util.Log.d("MemoryEngineImpl", "Memory[$index]: id=${memory.id}, userId=${memory.userId}, personaId=${memory.personaId}, text=${memory.text.take(50)}")
+        }
+        android.util.Log.d("MemoryEngineImpl", "=== END DEBUG ===")
     }
 
     /**

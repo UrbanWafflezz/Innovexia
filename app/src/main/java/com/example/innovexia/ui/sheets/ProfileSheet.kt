@@ -2,9 +2,9 @@ package com.example.innovexia.ui.sheets
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -52,15 +53,11 @@ import com.example.innovexia.ui.sheets.profile.ProfileTab
 import com.example.innovexia.ui.sheets.profile.ProfileViewModel
 import com.example.innovexia.ui.sheets.profile.tabs.CloudSyncTab
 import com.example.innovexia.ui.sheets.profile.tabs.ProfileTab as ProfileTabContent
-import com.example.innovexia.ui.sheets.profile.tabs.SecurityTab
-import com.example.innovexia.ui.sheets.profile.tabs.SubscriptionsTab
-import com.example.innovexia.ui.sheets.profile.tabs.UsageTab
 import com.example.innovexia.ui.theme.DarkColors
 import com.example.innovexia.ui.theme.InnovexiaColors
 import com.example.innovexia.ui.theme.LightColors
+import com.example.innovexia.ui.theme.getBackgroundGradient
 import com.example.innovexia.ui.viewmodels.AuthViewModel
-import com.example.innovexia.ui.viewmodels.SubscriptionViewModel
-import com.example.innovexia.ui.viewmodels.SubscriptionViewModelFactory
 import kotlinx.coroutines.launch
 
 /**
@@ -81,19 +78,8 @@ fun ProfileDialog(
     val context = LocalContext.current
     val app = context.applicationContext as InnovexiaApplication
     val profileViewModel = viewModel { ProfileViewModel(context) }
-    val subscriptionViewModel: SubscriptionViewModel = viewModel(
-        factory = SubscriptionViewModelFactory(app.subscriptionRepository, app.usageRepository)
-    )
     val signedIn by authViewModel.signedIn.collectAsState()
     val scope = rememberCoroutineScope()
-
-    // Subscription state
-    val subscription by subscriptionViewModel.subscription.collectAsState()
-    val currentUsage by subscriptionViewModel.currentUsage.collectAsState()
-    val todayUsage by subscriptionViewModel.todayUsage.collectAsState()
-    val planLimits by subscriptionViewModel.planLimits.collectAsState()
-    val usagePercent by subscriptionViewModel.usagePercent.collectAsState()
-    val burstCount by subscriptionViewModel.burstCount.collectAsState()
 
     // Refresh auth state when sheet is opened
     LaunchedEffect(Unit) {
@@ -122,21 +108,21 @@ fun ProfileDialog(
             usePlatformDefaultWidth = false
         )
     ) {
-        // Outer surface (rounded card)
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = if (darkTheme) Color(0xFF141A22) else Color.White,
-            tonalElevation = 0.dp,
-            border = BorderStroke(
-                1.dp,
-                if (darkTheme) Color(0xFF253041).copy(alpha = 0.6f) else Color(0xFFE7EDF5).copy(alpha = 0.6f)
-            ),
+        // Outer surface (rounded card) with gradient background
+        Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 24.dp)
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f) // Bounded height
                 .imePadding()
                 .navigationBarsPadding()
+                .clip(RoundedCornerShape(20.dp))
+                .background(brush = getBackgroundGradient(darkTheme))
+                .border(
+                    1.dp,
+                    if (darkTheme) Color(0xFF253041).copy(alpha = 0.6f) else Color(0xFFE7EDF5).copy(alpha = 0.6f),
+                    RoundedCornerShape(20.dp)
+                )
         ) {
             // Layout: header + tabs fixed; body scrolls
             Column(
@@ -149,15 +135,16 @@ fun ProfileDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column {
-                        Text(
-                            "Profile",
-                            color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    // Only show "Profile" title when user is signed in
+                    if (signedIn) {
+                        Column {
+                            Text(
+                                "Profile",
+                                color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
 
-                        if (signedIn) {
                             profileViewModel.user.collectAsState().value?.email?.let { email ->
                                 Text(
                                     text = email,
@@ -198,32 +185,13 @@ fun ProfileDialog(
                         when (profileViewModel.tab.collectAsState().value) {
                             ProfileTab.Profile -> ProfileTabContent(
                                 darkTheme = darkTheme,
-                                viewModel = profileViewModel
-                            )
-                            ProfileTab.Usage -> UsageTab(
-                                currentUsage = currentUsage,
-                                todayUsage = todayUsage,
-                                plan = subscription.plan,
-                                planLimits = planLimits,
-                                usagePercent = usagePercent,
-                                burstCount = burstCount,
-                                onRefresh = { subscriptionViewModel.refresh() },
-                                onUpgrade = {
-                                    // Navigate to subscriptions page
-                                    Toast.makeText(context, "Navigate to subscriptions page", Toast.LENGTH_SHORT).show()
-                                },
-                                darkTheme = darkTheme
-                            )
-                            ProfileTab.Security -> SecurityTab(
-                                darkTheme = darkTheme,
+                                viewModel = profileViewModel,
                                 onSignOut = {
                                     authViewModel.signOut()
                                     profileViewModel.refreshUser()
-                                    subscriptionViewModel.clear()
                                     homeViewModel?.clearAllChatState()
                                     onDismiss()
-                                },
-                                viewModel = profileViewModel
+                                }
                             )
                             ProfileTab.CloudSync -> CloudSyncTab(
                                 darkTheme = darkTheme,
@@ -238,8 +206,6 @@ fun ProfileDialog(
                             onSignInSuccess = {
                                 // Clear chat state when signing in with a different account
                                 homeViewModel?.clearAllChatState()
-                                // Force refresh subscription and entitlements on login
-                                subscriptionViewModel.refresh()
                                 // Force sync entitlements from Firestore
                                 scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                     app.entitlementsRepo.forceSync()
@@ -268,8 +234,6 @@ private fun ProfileTabs(
 ) {
     val tabs = listOf(
         ProfileTab.Profile,
-        ProfileTab.Usage,
-        ProfileTab.Security,
         ProfileTab.CloudSync
     )
 

@@ -55,26 +55,56 @@ data class UpdatePreferences(
 
 /**
  * Compare two semantic versions (e.g., "1.0.2" vs "1.0.3")
+ * Supports versions with optional 'v' prefix and handles pre-release suffixes
  * Returns:
  * - negative if version1 < version2
  * - 0 if version1 == version2
  * - positive if version1 > version2
  */
 fun compareVersions(version1: String, version2: String): Int {
-    val v1Parts = version1.removePrefix("v").split(".").mapNotNull { it.toIntOrNull() }
-    val v2Parts = version2.removePrefix("v").split(".").mapNotNull { it.toIntOrNull() }
+    try {
+        // Remove 'v' prefix if present
+        val v1Clean = version1.removePrefix("v").trim()
+        val v2Clean = version2.removePrefix("v").trim()
 
-    val maxLength = maxOf(v1Parts.size, v2Parts.size)
+        // Split by '.' and extract numeric parts (ignore suffixes like -beta, -rc1, etc.)
+        val v1Parts = v1Clean
+            .split(".", "-", "_")
+            .take(3) // Only take major.minor.patch
+            .mapNotNull { it.toIntOrNull() }
 
-    for (i in 0 until maxLength) {
-        val v1Part = v1Parts.getOrElse(i) { 0 }
-        val v2Part = v2Parts.getOrElse(i) { 0 }
+        val v2Parts = v2Clean
+            .split(".", "-", "_")
+            .take(3) // Only take major.minor.patch
+            .mapNotNull { it.toIntOrNull() }
 
-        when {
-            v1Part < v2Part -> return -1
-            v1Part > v2Part -> return 1
+        // Ensure we have at least some version parts
+        if (v1Parts.isEmpty() && v2Parts.isEmpty()) {
+            return 0
         }
-    }
+        if (v1Parts.isEmpty()) {
+            return -1 // v1 is invalid, consider it older
+        }
+        if (v2Parts.isEmpty()) {
+            return 1 // v2 is invalid, consider v1 newer
+        }
 
-    return 0
+        val maxLength = maxOf(v1Parts.size, v2Parts.size)
+
+        for (i in 0 until maxLength) {
+            val v1Part = v1Parts.getOrElse(i) { 0 }
+            val v2Part = v2Parts.getOrElse(i) { 0 }
+
+            when {
+                v1Part < v2Part -> return -1
+                v1Part > v2Part -> return 1
+            }
+        }
+
+        return 0
+    } catch (e: Exception) {
+        // Fallback to string comparison if parsing fails
+        android.util.Log.w("UpdateModels", "Failed to parse versions: $version1 vs $version2", e)
+        return version1.compareTo(version2)
+    }
 }

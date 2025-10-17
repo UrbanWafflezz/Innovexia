@@ -43,7 +43,6 @@ import kotlinx.coroutines.delay
  * @param onPickPhotos Callback for picking photos
  * @param onPickFiles Callback for picking files
  * @param onCapture Callback for capturing with camera
- * @param onScanPdf Callback for scanning to PDF (placeholder/camera)
  * @param groundingEnabled Whether grounding mode is active
  * @param onGroundingToggle Callback for toggling grounding mode
  */
@@ -53,7 +52,6 @@ fun AttachmentToolbar(
     onPickPhotos: () -> Unit,
     onPickFiles: () -> Unit,
     onCapture: () -> Unit,
-    onScanPdf: () -> Unit,
     groundingEnabled: Boolean = false,
     onGroundingToggle: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -116,8 +114,7 @@ fun AttachmentToolbar(
                             android.util.Log.d("AttachmentToolbar", "Grounding clicked! Current: $groundingEnabled, New: ${!groundingEnabled}")
                             currentOnGroundingToggle.value(!groundingEnabled)
                         },
-                        Triple(Icons.Rounded.PhotoCamera, "Camera", onCapture),
-                        Triple(Icons.Rounded.PictureAsPdf, "Scan", onScanPdf)
+                        Triple(Icons.Rounded.PhotoCamera, "Camera", onCapture)
                     )
                 }
 

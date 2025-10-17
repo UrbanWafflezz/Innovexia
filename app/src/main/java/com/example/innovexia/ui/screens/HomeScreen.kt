@@ -116,8 +116,13 @@ import com.example.innovexia.core.sync.CloudSyncDetector
 import com.example.innovexia.core.auth.FirebaseAuthManager
 import com.example.innovexia.core.permissions.PermissionHelper
 import com.example.innovexia.core.permissions.rememberAudioPermissionLauncher
+import com.example.innovexia.core.permissions.rememberCameraPermissionLauncher
 import com.example.innovexia.core.voice.VoiceInputManager
 import androidx.compose.runtime.DisposableEffect
+import androidx.core.content.FileProvider
+import android.net.Uri
+import android.Manifest
+import java.io.File
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -279,6 +284,40 @@ fun HomeScreen(
             viewModel.processAttachmentUris(uris, context.contentResolver)
         }
         showAttachmentToolbar = false
+    }
+
+    // Camera capture state
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Camera launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraImageUri != null) {
+            android.util.Log.d("HomeScreen", "Camera capture successful, processing image")
+            viewModel.processAttachmentUris(listOf(cameraImageUri!!), context.contentResolver)
+        } else {
+            android.util.Log.w("HomeScreen", "Camera capture failed or cancelled")
+        }
+        cameraImageUri = null // Clear after use
+    }
+
+    // Camera permission launcher
+    val cameraPermissionLauncher = rememberCameraPermissionLauncher { granted ->
+        if (granted) {
+            android.util.Log.d("HomeScreen", "Camera permission granted, launching camera")
+            // Create temporary file for camera output
+            val photoFile = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
+            cameraImageUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                photoFile
+            )
+            cameraLauncher.launch(cameraImageUri!!)
+        } else {
+            android.util.Log.w("HomeScreen", "Camera permission denied")
+            android.widget.Toast.makeText(context, "Camera permission is required to take photos", android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     // Snackbar for errors
@@ -686,6 +725,21 @@ fun HomeScreen(
                 onPickFiles = {
                     filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))
                 },
+                onCapture = {
+                    if (PermissionHelper.hasCameraPermission(context)) {
+                        android.util.Log.d("HomeScreen", "Camera permission already granted, launching camera")
+                        val photoFile = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
+                        cameraImageUri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            photoFile
+                        )
+                        cameraLauncher.launch(cameraImageUri!!)
+                    } else {
+                        android.util.Log.d("HomeScreen", "Requesting camera permission")
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                },
                 attachments = attachments,
                 onRemoveAttachment = { attachmentId ->
                     viewModel.removeAttachment(attachmentId)
@@ -1033,6 +1087,7 @@ private fun HomeContent(
     showAttachmentToolbar: Boolean = false,
     onPickPhotos: () -> Unit = {},
     onPickFiles: () -> Unit = {},
+    onCapture: () -> Unit = {},
     attachments: List<com.example.innovexia.data.models.AttachmentMeta> = emptyList(),
     onRemoveAttachment: (String) -> Unit = {},
     currentModelName: String = "Gemini 2.5 Flash",
@@ -1321,12 +1376,7 @@ private fun HomeContent(
                     visible = showAttachmentToolbar,
                     onPickPhotos = onPickPhotos,
                     onPickFiles = onPickFiles,
-                    onCapture = {
-                        android.widget.Toast.makeText(context, "Camera - wire to launcher", android.widget.Toast.LENGTH_SHORT).show()
-                    },
-                    onScanPdf = {
-                        android.widget.Toast.makeText(context, "Scan PDF - wire to launcher", android.widget.Toast.LENGTH_SHORT).show()
-                    },
+                    onCapture = onCapture,
                     groundingEnabled = groundingEnabled,
                     onGroundingToggle = onGroundingToggle
                 )

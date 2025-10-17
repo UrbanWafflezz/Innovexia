@@ -4,8 +4,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,14 +23,18 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,15 +45,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.innovexia.ui.glass.GlassButton
-import com.example.innovexia.ui.glass.GlassButtonStyle
-import com.example.innovexia.ui.glass.GlassField
 import com.example.innovexia.ui.theme.DarkColors
 import com.example.innovexia.ui.theme.LightColors
 import com.example.innovexia.ui.viewmodels.AuthViewModel
@@ -197,33 +196,34 @@ private fun SignInView(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Input fields
+        // Input fields with Material 3
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GlassField(
+            M3AuthTextField(
                 value = state.email,
                 onValueChange = { onStateChange(state.copy(email = it)) },
-                hint = "Email or Username",
-                leading = {
+                label = "Email",
+                leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Email,
                         contentDescription = null,
                         tint = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
                     )
                 },
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
                 darkTheme = darkTheme
             )
 
-            GlassField(
+            M3AuthTextField(
                 value = state.password,
                 onValueChange = { onStateChange(state.copy(password = it)) },
-                hint = "Password",
+                label = "Password",
                 isPassword = true,
-                leading = {
+                leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = null,
@@ -234,34 +234,34 @@ private fun SignInView(
             )
         }
 
-        // Remember me checkbox
+        // Remember me checkbox - Material 3 styled
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp, bottom = 2.dp)
+                .padding(top = 8.dp, bottom = 4.dp)
         ) {
             Checkbox(
                 checked = state.rememberMe,
                 onCheckedChange = { onStateChange(state.copy(rememberMe = it)) },
                 colors = CheckboxDefaults.colors(
                     checkedColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
-                    uncheckedColor = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
+                    uncheckedColor = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.6f) else LightColors.SecondaryText.copy(alpha = 0.6f),
+                    checkmarkColor = Color.White
                 )
             )
             Text(
                 text = "Remember me",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
-                modifier = Modifier.padding(start = 4.dp)
+                color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // Primary action button
-        GlassButton(
-            text = if (busy) "Signing in…" else "Sign in",
+        // Primary action button - Material 3 filled button
+        Button(
             onClick = {
                 if (state.email.isNotBlank() && state.password.isNotBlank()) {
                     onSignIn(state.email, state.password)
@@ -269,34 +269,68 @@ private fun SignInView(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(52.dp),
             enabled = !busy && state.email.isNotBlank() && state.password.isNotBlank(),
-            darkTheme = darkTheme
-        )
-
-        Spacer(Modifier.height(10.dp))
-
-        // Secondary actions
-        GlassButton(
-            text = "Sign up",
-            onClick = { onStateChange(state.copy(screen = AuthScreen.SignUp)) },
-            style = GlassButtonStyle.Secondary,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(46.dp),
-            darkTheme = darkTheme
-        )
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                contentColor = Color.White,
+                disabledContainerColor = if (darkTheme) Color(0xFF374151) else Color(0xFFD1D5DB),
+                disabledContentColor = if (darkTheme) Color(0xFF6B7280) else Color(0xFF9CA3AF)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            if (busy) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+            Text(
+                text = if (busy) "Signing in…" else "Sign in",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
 
-        // Forgot password link
-        GlassButton(
-            text = "Forgot password?",
+        // Secondary actions - Material 3 outlined button
+        OutlinedButton(
+            onClick = { onStateChange(state.copy(screen = AuthScreen.SignUp)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText
+            ),
+            border = BorderStroke(
+                1.dp,
+                if (darkTheme) Color(0xFF374151) else Color(0xFFD1D5DB)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = "Sign up",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium
+                )
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Forgot password link - Material 3 text button
+        TextButton(
             onClick = { onStateChange(state.copy(screen = AuthScreen.ForgotPassword)) },
-            style = GlassButtonStyle.Ghost,
-            modifier = Modifier.fillMaxWidth(),
-            darkTheme = darkTheme
-        )
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Forgot password?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+            )
+        }
     }
 }
 
@@ -337,18 +371,18 @@ private fun SignUpView(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Input fields
+        // Input fields with Material 3
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GlassField(
+            M3AuthTextField(
                 value = state.username,
                 onValueChange = { onStateChange(state.copy(username = it)) },
-                hint = "Username",
-                leading = {
+                label = "Username",
+                leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
@@ -358,64 +392,69 @@ private fun SignUpView(
                 darkTheme = darkTheme
             )
 
-            GlassField(
+            M3AuthTextField(
                 value = state.email,
                 onValueChange = { onStateChange(state.copy(email = it)) },
-                hint = "Email",
-                leading = {
+                label = "Email",
+                leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Email,
                         contentDescription = null,
                         tint = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
                     )
                 },
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
                 darkTheme = darkTheme
             )
 
-            GlassField(
+            M3AuthTextField(
                 value = state.password,
                 onValueChange = { onStateChange(state.copy(password = it)) },
-                hint = "Password",
+                label = "Password",
                 isPassword = true,
-                leading = {
+                leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = null,
                         tint = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
                     )
                 },
+                supportingText = if (state.password.isNotEmpty() && state.password.length < 6) {
+                    "Password must be at least 6 characters"
+                } else null,
+                isError = state.password.isNotEmpty() && state.password.length < 6,
                 darkTheme = darkTheme
             )
         }
 
-        // Terms checkbox
+        // Terms checkbox - Material 3 styled
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp, bottom = 2.dp)
+                .padding(top = 8.dp, bottom = 4.dp)
         ) {
             Checkbox(
                 checked = state.agreedToTerms,
                 onCheckedChange = { onStateChange(state.copy(agreedToTerms = it)) },
                 colors = CheckboxDefaults.colors(
                     checkedColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
-                    uncheckedColor = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
+                    uncheckedColor = if (darkTheme) DarkColors.SecondaryText.copy(alpha = 0.6f) else LightColors.SecondaryText.copy(alpha = 0.6f),
+                    checkmarkColor = Color.White
                 )
             )
             Text(
                 text = "I agree to Terms and Conditions",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
-                modifier = Modifier.padding(start = 4.dp)
+                color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // Primary action button
-        GlassButton(
-            text = if (busy) "Creating account…" else "Create account",
+        // Primary action button - Material 3 filled button
+        Button(
             onClick = {
                 if (state.username.isNotBlank() &&
                     state.email.isNotBlank() &&
@@ -427,25 +466,47 @@ private fun SignUpView(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(52.dp),
             enabled = !busy &&
                     state.username.isNotBlank() &&
                     state.email.isNotBlank() &&
-                    state.password.isNotBlank() &&
+                    state.password.length >= 6 &&
                     state.agreedToTerms,
-            darkTheme = darkTheme
-        )
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                contentColor = Color.White,
+                disabledContainerColor = if (darkTheme) Color(0xFF374151) else Color(0xFFD1D5DB),
+                disabledContentColor = if (darkTheme) Color(0xFF6B7280) else Color(0xFF9CA3AF)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            if (busy) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+            Text(
+                text = if (busy) "Creating account…" else "Create account",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // Back to sign in
-        GlassButton(
-            text = "Back to sign in",
+        // Back to sign in - Material 3 text button
+        TextButton(
             onClick = { onStateChange(state.copy(screen = AuthScreen.SignIn)) },
-            style = GlassButtonStyle.Ghost,
-            modifier = Modifier.fillMaxWidth(),
-            darkTheme = darkTheme
-        )
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Already have an account? Sign in",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+            )
+        }
     }
 }
 
@@ -488,28 +549,28 @@ private fun ForgotPasswordView(
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Email input
-            GlassField(
+            // Email input with Material 3
+            M3AuthTextField(
                 value = state.email,
                 onValueChange = { onStateChange(state.copy(email = it)) },
-                hint = "Email",
-                leading = {
+                label = "Email",
+                leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Email,
                         contentDescription = null,
                         tint = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
                     )
                 },
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
                 darkTheme = darkTheme
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Send button
-            GlassButton(
-                text = if (busy) "Sending…" else "Send reset link",
+            // Send button - Material 3 filled button
+            Button(
                 onClick = {
                     if (state.email.isNotBlank()) {
                         onSendReset(state.email)
@@ -518,30 +579,55 @@ private fun ForgotPasswordView(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
+                    .height(52.dp),
                 enabled = !busy && state.email.isNotBlank(),
-                darkTheme = darkTheme
-            )
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                    contentColor = Color.White,
+                    disabledContainerColor = if (darkTheme) Color(0xFF374151) else Color(0xFFD1D5DB),
+                    disabledContentColor = if (darkTheme) Color(0xFF6B7280) else Color(0xFF9CA3AF)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+                Text(
+                    text = if (busy) "Sending…" else "Send reset link",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+            }
 
-            Spacer(Modifier.height(12.dp))
-        } else {
-            // Success state
             Spacer(Modifier.height(16.dp))
+        } else {
+            // Success state - Material 3 styled
+            Spacer(Modifier.height(32.dp))
 
-            // Success icon
+            // Success icon with Material 3 surface
             Box(
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .background(
+                        color = if (darkTheme) Color(0xFF064E3B) else Color(0xFFD1FAE5),
+                        shape = RoundedCornerShape(100.dp)
+                    )
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier.padding(8.dp)
+                    tint = if (darkTheme) Color(0xFF34D399) else Color(0xFF10B981),
+                    modifier = androidx.compose.ui.Modifier.padding(8.dp)
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(24.dp))
 
             // Success message
             Column(
@@ -556,28 +642,32 @@ private fun ForgotPasswordView(
                     color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText
                 )
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Text(
                     text = "Check your email for the password reset link.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
+                    color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(32.dp))
         }
 
-        // Back to sign in
-        GlassButton(
-            text = "Back to sign in",
+        // Back to sign in - Material 3 text button
+        TextButton(
             onClick = {
                 resetSent = false
                 onStateChange(state.copy(screen = AuthScreen.SignIn))
             },
-            style = GlassButtonStyle.Ghost,
-            modifier = Modifier.fillMaxWidth(),
-            darkTheme = darkTheme
-        )
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Back to sign in",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (darkTheme) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+            )
+        }
     }
 }
