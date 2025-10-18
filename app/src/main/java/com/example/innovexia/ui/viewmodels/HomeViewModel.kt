@@ -386,9 +386,10 @@ class HomeViewModel(
                             // Update UI state
                             _streamingText.value += chunk.text
 
-                            // Capture token counts from API
-                            if (chunk.inputTokens > 0 || chunk.outputTokens > 0) {
-                                finalInputTokens = chunk.inputTokens
+                            // Capture token counts for usage tracking
+                            // Use userMessageTokens instead of full inputTokens to exclude memories/system prompts
+                            if (chunk.userMessageTokens > 0 || chunk.outputTokens > 0) {
+                                finalInputTokens = chunk.userMessageTokens  // Only count user message, not memories/system
                                 finalOutputTokens = chunk.outputTokens
                             }
 

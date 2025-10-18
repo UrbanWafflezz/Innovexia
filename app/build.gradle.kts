@@ -16,8 +16,8 @@ android {
         applicationId = "com.example.innovexia"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.1.0-beta"
+        versionCode = 11
+        versionName = "1.1.1-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

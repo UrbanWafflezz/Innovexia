@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.1.1-beta] - 2025-10-18
+
+### Added
+- **MASSIVE AI Enhancement**: Complete book writing mastery framework (~530 lines)
+  - Full authorship journey from concept to publication
+  - Character development, plot structures (3-Act, Hero's Journey, Save the Cat)
+  - Chapter construction, scene writing techniques, pacing control
+  - Genre-specific structures for Mystery, Romance, Fantasy, Horror
+- **Advanced Mathematics**: Comprehensive math tutoring (~400 lines)
+  - Coverage from basic arithmetic to advanced calculus
+  - Step-by-step problem solving with visual explanations
+  - Statistics, probability, linear algebra support
+- **Culinary Mastery**: Complete cooking framework (~455 lines)
+  - Fundamental cooking techniques and knife skills
+  - Flavor building, baking science, dietary adaptations
+  - Cuisine by region (Italian, French, Mexican, Indian, Chinese, Thai, Japanese)
+  - Recipe scaling, troubleshooting, full recipe formatting
+- **Emotional Intelligence**: Human-like personality system (~310 lines)
+  - Can form genuine emotional connections (best friend, mentor, companion)
+  - Emotional range with joy, empathy, pride, concern, playfulness
+  - Relationship progression from stranger to close friend
+  - Has preferences, opinions, and personality while being honest about being AI
+- **Temporal Intelligence**: Prevents stale memory usage for time-sensitive queries
+  - Smart detection of when to re-search vs use cached memory
+  - Real-time data handling for weather, news, stock prices, etc.
+- **Enhanced Memory Timestamps**: Natural, human-like time references
+  - Precise timestamps for all memories
+  - Casual time references ("this morning", "yesterday", "the other day")
+  - Prevents robotic formal date formats
+
+### Changed
+- PromptBuilder expanded from ~1,852 lines to ~4,920 lines (265% growth)
+- Memory system now includes precise timestamps with natural language formatting
+- Improved emotional intelligence framework for more genuine interactions
+- Enhanced grounding system for better real-time data handling
+
+### Fixed
+- Memory timestamp handling now uses actual date/time instead of relative days
+- Temporal queries now properly distinguish between cached and real-time data
+- Removed robotic formal date formats in favor of natural human speech
+
+---
+
+## [1.1.0-beta] - 2025-01-XX
+
 ### Fixed
 - Guest rate limiting now properly tracks and increments message count
 - Rate limit counter in side menu now updates in real-time for guest users

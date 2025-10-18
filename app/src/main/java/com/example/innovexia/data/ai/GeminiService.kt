@@ -576,6 +576,10 @@ class GeminiService(
             }
         }
 
+        // Calculate user message tokens ONLY (not including memories/system prompts)
+        val userMessageTokenCount = com.example.innovexia.subscriptions.mock.TokenCounter.estimateInputTokens(userText).toInt()
+        android.util.Log.d("GeminiService", "User message token estimate: $userMessageTokenCount tokens")
+
         var latestInputTokens = 0
         var latestOutputTokens = 0
 
@@ -590,7 +594,8 @@ class GeminiService(
                 StreamChunk(
                     text = response.text ?: "",
                     inputTokens = latestInputTokens,
-                    outputTokens = latestOutputTokens
+                    outputTokens = latestOutputTokens,
+                    userMessageTokens = userMessageTokenCount
                 )
             }
             .catch { exception ->
@@ -1145,6 +1150,10 @@ class GeminiService(
         if (groundingEnabled) {
             android.util.Log.d("GeminiService", "Using REST API for Google Search grounding")
 
+            // Calculate user message tokens ONLY (not including memories/system prompts)
+            val userMessageTokenCount = com.example.innovexia.subscriptions.mock.TokenCounter.estimateInputTokens(userText).toInt()
+            android.util.Log.d("GeminiService", "User message token estimate: $userMessageTokenCount tokens")
+
             // Build REST API request with full conversation history
             val contents = mutableListOf<Content>()
 
@@ -1191,7 +1200,11 @@ class GeminiService(
                 )
             )
 
+            // Wrap the REST client stream to add userMessageTokens to each chunk
             return restClient.generateContentStream(modelName, request)
+                .map { chunk ->
+                    chunk.copy(userMessageTokens = userMessageTokenCount)
+                }
         } else {
             // Use SDK for non-grounding requests
             android.util.Log.d("GeminiService", "Using SDK (grounding disabled)")
@@ -1214,6 +1227,10 @@ class GeminiService(
                 )
             )
 
+            // Calculate user message tokens ONLY (not including memories/system prompts)
+            val userMessageTokenCount = com.example.innovexia.subscriptions.mock.TokenCounter.estimateInputTokens(userText).toInt()
+            android.util.Log.d("GeminiService", "User message token estimate: $userMessageTokenCount tokens")
+
             var latestInputTokens = 0
             var latestOutputTokens = 0
 
@@ -1228,6 +1245,7 @@ class GeminiService(
                         text = response.text ?: "",
                         inputTokens = latestInputTokens,
                         outputTokens = latestOutputTokens,
+                        userMessageTokens = userMessageTokenCount,
                         groundingMetadata = null
                     )
                 }

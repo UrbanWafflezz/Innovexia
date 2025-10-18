@@ -85,11 +85,17 @@ enum class GroundingStatus {
 
 /**
  * Streaming response chunk with optional grounding data and token counts.
+ *
+ * Token Counting:
+ * - inputTokens: Full prompt tokens from API (includes system, memories, sources, etc.)
+ * - outputTokens: Response tokens from API
+ * - userMessageTokens: Only the user's message tokens (for fair rate limiting)
  */
 data class StreamChunk(
     val text: String,
     val inputTokens: Int = 0,
     val outputTokens: Int = 0,
+    val userMessageTokens: Int = 0,  // Only user message tokens, not memories/system prompts
     val groundingMetadata: GroundingMetadata? = null,
     val groundingStatus: GroundingStatus = GroundingStatus.NONE
 )

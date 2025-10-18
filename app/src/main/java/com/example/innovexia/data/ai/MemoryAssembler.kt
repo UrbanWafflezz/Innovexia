@@ -217,10 +217,14 @@ class MemoryAssembler(private val database: AppDatabase) {
                 val shortTermCount = personaMemoryContext.shortTerm.size
                 parts.add("\nYou currently have $memoryCount relevant long-term memories and $shortTermCount recent memories from this conversation.")
 
-                val memoryTexts = personaMemoryContext.longTerm.joinToString("\n") { "- ${it.memory.text}" }
+                val memoryTexts = personaMemoryContext.longTerm.joinToString("\n") {
+                    val timestamp = formatMemoryTimestamp(it.memory.createdAt)
+                    "- ${it.memory.text} [${timestamp}]"
+                }
                 parts.add("\n### Retrieved Memories:\n$memoryTexts")
 
                 parts.add("\nWhen the user asks what you know about them, reference these memories. You have persistent memory across all conversations.")
+                parts.add("\nEach memory includes a timestamp in brackets showing when it was created. Use these timestamps to answer questions like 'when did I ask about X?' with specific dates and times.")
             }
 
             // Add PDF sources
@@ -268,5 +272,42 @@ class MemoryAssembler(private val database: AppDatabase) {
      */
     fun estimateTokens(messages: List<MessageEntity>): Int {
         return messages.sumOf { estimateTokens(it.text) }
+    }
+
+    /**
+     * Format memory timestamp for AI context
+     * - Today: "2:30 PM today"
+     * - Yesterday: "yesterday at 3:15 PM"
+     * - This week: "Tuesday at 10:00 AM"
+     * - Older: "Dec 15, 2024 at 2:30 PM"
+     */
+    private fun formatMemoryTimestamp(timestampMillis: Long): String {
+        val now = System.currentTimeMillis()
+        val diff = now - timestampMillis
+        val hours24 = 24 * 60 * 60 * 1000L
+        val days7 = 7 * 24 * 60 * 60 * 1000L
+
+        return when {
+            diff < hours24 -> {
+                // Today: Show time only
+                val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                "${sdf.format(java.util.Date(timestampMillis))} today"
+            }
+            diff < hours24 * 2 -> {
+                // Yesterday
+                val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                "yesterday at ${sdf.format(java.util.Date(timestampMillis))}"
+            }
+            diff < days7 -> {
+                // This week: Show day name
+                val sdf = java.text.SimpleDateFormat("EEEE 'at' h:mm a", java.util.Locale.getDefault())
+                sdf.format(java.util.Date(timestampMillis))
+            }
+            else -> {
+                // Older: Full date
+                val sdf = java.text.SimpleDateFormat("MMM d, yyyy 'at' h:mm a", java.util.Locale.getDefault())
+                sdf.format(java.util.Date(timestampMillis))
+            }
+        }
     }
 }
