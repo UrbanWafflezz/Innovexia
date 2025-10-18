@@ -6,12 +6,15 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -43,11 +46,16 @@ import com.example.innovexia.ui.animations.MotionDefaults
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Import source utilities
+import com.example.innovexia.ui.utils.SourceItem
+import com.example.innovexia.ui.utils.extractSources
+import com.example.innovexia.ui.utils.openUrlInApp
+import com.example.innovexia.ui.webview.WebViewDialog
+
 /**
  * Advanced Response Bubble V2
  * Premium markdown rendering with dynamic blocks, collapsibles, and modern typography
- *
- * NOTE: This is for REGULAR responses only. For web-grounded responses, use GroundingSearchBubble.
+ * Now supports both regular responses AND web-grounded responses with sources
  */
 @Composable
 fun ResponseBubbleV2(
@@ -57,6 +65,7 @@ fun ResponseBubbleV2(
     messageStatus: com.example.innovexia.ui.models.MessageStatus = com.example.innovexia.ui.models.MessageStatus.COMPLETE,
     modelName: String = "Innovexia",
     isTruncated: Boolean = false,
+    groundingMetadata: GroundingMetadata? = null,
     onRegenerate: (String) -> Unit = {},
     onCopy: (String) -> Unit = {},
     onContinue: (String) -> Unit = {}
@@ -128,82 +137,508 @@ fun ResponseBubbleV2(
                 )
             )
     ) {
-        Box {
-            Column {
-                // Message content with padding
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .animateContentSize(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessHigh,
-                                visibilityThreshold = IntSize(1, 1)
-                            )
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Header row with status pill
-                    if (streaming) {
-                        StatusPill(text = "Regenerating…", textSecondary = textSecondary)
-                        Spacer(Modifier.height(4.dp))
-                    }
+        // Dialog states
+        var showSourcesDialog by remember { mutableStateOf(false) }
+        var webViewUrl by remember { mutableStateOf<String?>(null) }
 
-                    // Show "Sending..." if in SENDING state, otherwise show content
-                    if (isSending) {
-                        SendingIndicator(textSecondary = textSecondary)
-                    } else if (streaming && message.text.isBlank()) {
-                        // Show skeleton while regenerating with no text yet
-                        ResponseBubbleSkeleton(textSecondary)
-                    } else {
-                        if (blocks.isNotEmpty()) {
-                            MarkdownBody(
-                                blocks = blocks,
-                                textPrimary = textPrimary,
-                                textSecondary = textSecondary,
-                                bubbleBorder = borderColor
-                            )
-                        }
+        // Extract sources from grounding metadata
+        val sources = remember(groundingMetadata) {
+            android.util.Log.d("ResponseBubbleV2", "🔍 Message ${message.id} - groundingMetadata: ${groundingMetadata != null}")
+            if (groundingMetadata != null) {
+                val extracted = extractSources(groundingMetadata)
+                android.util.Log.d("ResponseBubbleV2", "  → Extracted ${extracted.size} sources")
+                extracted
+            } else {
+                android.util.Log.w("ResponseBubbleV2", "  ⚠️ No groundingMetadata provided!")
+                emptyList()
+            }
+        }
 
-                        if (isStreaming && !streaming) {
-                            StreamingIndicator(textSecondary)
-                        }
-                    }
-
-                    // Error footer
-                    if (message.getStreamStateEnum() == com.example.innovexia.data.local.entities.StreamState.ERROR && message.error != null) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = message.error,
-                            color = Color(0xFFFF5252),
-                            style = MaterialTheme.typography.labelSmall
+        Column {
+            // Message content with padding
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh,
+                            visibilityThreshold = IntSize(1, 1)
                         )
-                    }
+                    ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Header row with web search badge, status pill and sources badge
+                if (streaming || sources.isNotEmpty() || groundingMetadata != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left side - Web Search badge OR Status pill
+                        if (streaming) {
+                            StatusPill(text = "Regenerating…", textSecondary = textSecondary)
+                        } else if (groundingMetadata != null && !isSending) {
+                            // Web Search badge for grounded responses
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = InnovexiaColors.Gold.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, InnovexiaColors.Gold.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.TravelExplore,
+                                        contentDescription = "Web Search",
+                                        tint = InnovexiaColors.Gold,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "Web Search",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            color = InnovexiaColors.Gold
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(Modifier.width(1.dp))
+                        }
 
-                    // Truncation footer (token limit reached)
-                    if (isTruncated && !isStreaming && !streaming) {
-                        Spacer(Modifier.height(8.dp))
-                        TruncationFooter(
+                        // Sources badge on right
+                        if (sources.isNotEmpty() && !isSending) {
+                            Surface(
+                                modifier = Modifier.clickable { showSourcesDialog = true },
+                                shape = RoundedCornerShape(999.dp),
+                                color = InnovexiaColors.BlueAccent.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, InnovexiaColors.BlueAccent.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Link,
+                                        contentDescription = "Sources",
+                                        tint = InnovexiaColors.BlueAccent,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "${sources.size}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            color = InnovexiaColors.BlueAccent
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+
+                // Show "Sending..." if in SENDING state, otherwise show content
+                if (isSending) {
+                    SendingIndicator(textSecondary = textSecondary)
+                } else if (streaming && message.text.isBlank()) {
+                    // Show skeleton while regenerating with no text yet
+                    ResponseBubbleSkeleton(textSecondary)
+                } else {
+                    if (blocks.isNotEmpty()) {
+                        MarkdownBody(
+                            blocks = blocks,
+                            textPrimary = textPrimary,
                             textSecondary = textSecondary,
-                            onContinue = { onContinue(message.id) }
+                            bubbleBorder = borderColor
                         )
+                    }
+
+                    if (isStreaming && !streaming) {
+                        StreamingIndicator(textSecondary)
                     }
                 }
 
-                // Footer with divider and actions
-                if (!isStreaming && !streaming) {
-                    FooterRow(
-                        message = message,
-                        timestamp = message.createdAt,
-                        modelName = modelName,
+                // Error footer
+                if (message.getStreamStateEnum() == com.example.innovexia.data.local.entities.StreamState.ERROR && message.error != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = message.error,
+                        color = Color(0xFFFF5252),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                // Truncation footer (token limit reached)
+                if (isTruncated && !isStreaming && !streaming) {
+                    Spacer(Modifier.height(8.dp))
+                    TruncationFooter(
                         textSecondary = textSecondary,
-                        dividerColor = dividerColor,
-                        actionsEnabled = actionsEnabled,
-                        onCopy = onCopy,
-                        onRegenerate = onRegenerate
+                        onContinue = { onContinue(message.id) }
                     )
                 }
             }
+
+            // Related Searches (only for web grounded responses with valid sources)
+            val relatedSearches = remember(groundingMetadata) {
+                generateRelatedSearches(
+                    metadata = groundingMetadata,
+                    userQuery = message.text.take(100) // Use first part of response as context
+                )
+            }
+
+            if (!isStreaming && !streaming && relatedSearches.isNotEmpty()) {
+                RelatedSearchesSection(
+                    searches = relatedSearches,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    dividerColor = dividerColor,
+                    isDark = isDark,
+                    onSearchClick = { query ->
+                        // Trigger a new search with the related query
+                        onRegenerate(query)
+                    }
+                )
+            }
+
+            // Footer with divider and actions
+            if (!isStreaming && !streaming) {
+                FooterRow(
+                    message = message,
+                    timestamp = message.createdAt,
+                    modelName = modelName,
+                    textSecondary = textSecondary,
+                    dividerColor = dividerColor,
+                    actionsEnabled = actionsEnabled,
+                    onCopy = onCopy,
+                    onRegenerate = onRegenerate
+                )
+            }
+        }
+
+        // Sources dialog popup
+        if (showSourcesDialog && sources.isNotEmpty()) {
+            SourcesDialog(
+                sources = sources,
+                onDismiss = { showSourcesDialog = false },
+                onOpenUrl = { url ->
+                    webViewUrl = url
+                    showSourcesDialog = false
+                },
+                textPrimary = textPrimary,
+                textSecondary = textSecondary
+            )
+        }
+
+        // In-app WebView browser
+        webViewUrl?.let { url ->
+            WebViewDialog(
+                url = url,
+                onDismiss = { webViewUrl = null }
+            )
+        }
+    }
+}
+
+/**
+ * Premium Sources Dialog - Modern bottomsheet-style with seamless animations
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SourcesDialog(
+    sources: List<SourceItem>,
+    onDismiss: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    textPrimary: Color,
+    textSecondary: Color
+) {
+    val isDark = isSystemInDarkTheme()
+
+    // Animated entry
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { isVisible = true }
+
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(200),
+        label = "dialog_alpha"
+    )
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.92f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "dialog_scale"
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = if (isDark) Color(0xFF1C1C1E) else Color(0xFFFAFAFA),
+            tonalElevation = 0.dp,
+            shadowElevation = 24.dp,
+            border = BorderStroke(
+                1.5.dp,
+                if (isDark) Color(0xFF2C2C2E).copy(alpha = 0.8f) else Color(0xFFE5E5EA).copy(alpha = 0.8f)
+            ),
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .heightIn(max = 560.dp)
+                .graphicsLayer {
+                    alpha = animatedAlpha
+                    scaleX = animatedScale
+                    scaleY = animatedScale
+                }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            ) {
+                // Modern pull handle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 12.dp, bottom = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(textSecondary.copy(alpha = 0.3f))
+                    )
+                }
+
+                // Header section
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Gradient icon background
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(InnovexiaColors.BlueAccent.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Public,
+                                    contentDescription = null,
+                                    tint = InnovexiaColors.BlueAccent,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = "Sources",
+                                    style = MaterialTheme.typography.headlineSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 22.sp,
+                                        color = textPrimary
+                                    )
+                                )
+                                Text(
+                                    text = "${sources.size} ${if (sources.size == 1) "reference" else "references"}",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = textSecondary,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Close button
+                        IconButton(
+                            onClick = { onDismiss() },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = "Close",
+                                tint = textSecondary
+                            )
+                        }
+                    }
+                }
+
+                // Premium divider with fade
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    textSecondary.copy(alpha = 0.15f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                // Scrollable sources list with padding
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    sources.forEachIndexed { index, source ->
+                        SourceCard(
+                            source = source,
+                            index = index,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            isDark = isDark,
+                            onClick = { onOpenUrl(source.url) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Individual source card with premium interactions
+ */
+@Composable
+private fun SourceCard(
+    source: SourceItem,
+    index: Int,
+    textPrimary: Color,
+    textSecondary: Color,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    val haptics = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+
+    val cardScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "card_press"
+    )
+
+    Surface(
+        onClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
+        shape = RoundedCornerShape(16.dp),
+        color = if (isDark) Color(0xFF2C2C2E) else Color.White,
+        tonalElevation = 0.dp,
+        shadowElevation = 2.dp,
+        border = BorderStroke(
+            1.dp,
+            if (isDark) Color(0xFF3A3A3C).copy(alpha = 0.6f) else Color(0xFFE5E5EA).copy(alpha = 0.8f)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Number badge with gradient
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(
+                                InnovexiaColors.BlueAccent.copy(alpha = 0.2f),
+                                InnovexiaColors.BlueAccent.copy(alpha = 0.1f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${index + 1}",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = InnovexiaColors.BlueAccent
+                    )
+                )
+            }
+
+            // Source content
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = source.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        color = textPrimary
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Link,
+                        contentDescription = null,
+                        tint = InnovexiaColors.BlueAccent.copy(alpha = 0.7f),
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = source.domain,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 13.sp,
+                            color = textSecondary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Arrow icon with subtle animation
+            Icon(
+                imageVector = Icons.Outlined.ArrowForward,
+                contentDescription = "Open",
+                tint = InnovexiaColors.BlueAccent.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -306,499 +741,6 @@ private fun FooterRow(
     }
 }
 
-/**
- * Markdown body with block-based rendering
- */
-@Composable
-private fun MarkdownBody(
-    blocks: List<MarkdownBlock>,
-    textPrimary: Color,
-    textSecondary: Color,
-    bubbleBorder: Color
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        blocks.forEach { block ->
-            when (block) {
-                is MarkdownBlock.Paragraph -> TextBlock(block, textPrimary)
-                is MarkdownBlock.Heading -> HeadingBlock(block, textPrimary)
-                is MarkdownBlock.List -> ListBlock(block, textPrimary)
-                is MarkdownBlock.Quote -> QuoteBlock(block, textPrimary, bubbleBorder)
-                is MarkdownBlock.Code -> CodeBlockV2(block, textPrimary, textSecondary, bubbleBorder)
-                is MarkdownBlock.Table -> TableBlock(block, textPrimary, textSecondary, bubbleBorder)
-                is MarkdownBlock.Callout -> CalloutBlock(block, textPrimary)
-                is MarkdownBlock.Collapsible -> CollapsibleBlock(block, textPrimary, textSecondary, bubbleBorder)
-                is MarkdownBlock.Image -> ImageBlock(block)
-                is MarkdownBlock.Divider -> Divider(color = bubbleBorder, thickness = 1.dp)
-            }
-        }
-    }
-}
-
-/**
- * Text/Paragraph block
- */
-@Composable
-private fun TextBlock(block: MarkdownBlock.Paragraph, textPrimary: Color) {
-    Text(
-        text = parseInlineMarkdown(block.text, textPrimary),
-        style = MaterialTheme.typography.bodyMedium.copy(
-            lineHeight = 22.sp,
-            fontSize = 14.sp,
-            color = textPrimary,
-            letterSpacing = 0.2.sp
-        )
-    )
-}
-
-/**
- * Heading block
- */
-@Composable
-private fun HeadingBlock(block: MarkdownBlock.Heading, textPrimary: Color) {
-    val (size, topPadding, bottomPadding) = when (block.level) {
-        1 -> Triple(20.sp, 8.dp, 4.dp)
-        2 -> Triple(18.sp, 6.dp, 3.dp)
-        3 -> Triple(16.sp, 4.dp, 2.dp)
-        else -> Triple(15.sp, 2.dp, 1.dp)
-    }
-    Text(
-        text = parseInlineMarkdown(block.text, textPrimary),
-        fontSize = size,
-        fontWeight = FontWeight.Bold,
-        lineHeight = (size.value * 1.3).sp,
-        color = textPrimary,
-        modifier = Modifier.padding(top = topPadding, bottom = bottomPadding)
-    )
-}
-
-/**
- * List block (ordered/unordered)
- */
-@Composable
-private fun ListBlock(block: MarkdownBlock.List, textPrimary: Color) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        block.items.forEachIndexed { index, item ->
-            // Main list item
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    // Render checkbox for task lists
-                    if (block.isTaskList) {
-                        val isChecked = block.checkedStates.getOrNull(index) ?: false
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .border(
-                                    width = 2.dp,
-                                    color = if (isChecked) InnovexiaColors.Success else textPrimary.copy(alpha = 0.4f),
-                                    shape = RoundedCornerShape(4.dp)
-                                )
-                                .background(
-                                    if (isChecked) InnovexiaColors.Success.copy(alpha = 0.1f) else Color.Transparent,
-                                    RoundedCornerShape(4.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isChecked) {
-                                Text(
-                                    text = "✓",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = InnovexiaColors.Success
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = if (block.ordered) "${index + 1}." else "•",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 14.sp,
-                                color = textPrimary.copy(alpha = 0.7f),
-                                fontWeight = FontWeight.Medium
-                            ),
-                            modifier = Modifier.width(24.dp)
-                        )
-                    }
-
-                    Text(
-                        text = parseInlineMarkdown(item, textPrimary),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            lineHeight = 22.sp,
-                            fontSize = 14.sp,
-                            color = textPrimary,
-                            textDecoration = if (block.isTaskList && block.checkedStates.getOrNull(index) == true) {
-                                androidx.compose.ui.text.style.TextDecoration.LineThrough
-                            } else null
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                // Render nested list items if present
-                val nestedItems = block.nestedLists.getOrNull(index) ?: emptyList()
-                if (nestedItems.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 34.dp, top = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        nestedItems.forEach { nestedItem ->
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Text(
-                                    text = "◦",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 12.sp,
-                                        color = textPrimary.copy(alpha = 0.6f)
-                                    ),
-                                    modifier = Modifier.width(16.dp)
-                                )
-                                Text(
-                                    text = parseInlineMarkdown(nestedItem, textPrimary),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        lineHeight = 20.sp,
-                                        fontSize = 13.sp,
-                                        color = textPrimary
-                                    ),
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Quote block
- */
-@Composable
-private fun QuoteBlock(block: MarkdownBlock.Quote, textPrimary: Color, borderColor: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(borderColor.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
-            .border(
-                width = 3.dp,
-                color = borderColor.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(4.dp)
-            )
-            .padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 10.dp)
-    ) {
-        Text(
-            text = parseInlineMarkdown(block.text, textPrimary),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
-                fontStyle = FontStyle.Italic,
-                color = textPrimary.copy(alpha = 0.85f),
-                letterSpacing = 0.15.sp
-            )
-        )
-    }
-}
-
-/**
- * Code block with toolbar
- */
-@Composable
-private fun CodeBlockV2(
-    block: MarkdownBlock.Code,
-    textPrimary: Color,
-    textSecondary: Color,
-    borderColor: Color
-) {
-    val clipboardManager = LocalClipboardManager.current
-    var copied by remember { mutableStateOf(false) }
-
-    LaunchedEffect(copied) {
-        if (copied) {
-            kotlinx.coroutines.delay(2000)
-            copied = false
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .border(1.dp, borderColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-            .padding(vertical = 10.dp, horizontal = 12.dp)
-    ) {
-        // Toolbar
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = (block.language?.uppercase() ?: "CODE"),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = textSecondary
-                )
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(block.code))
-                        copied = true
-                    },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = if (copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
-                        contentDescription = "Copy code",
-                        tint = if (copied) InnovexiaColors.Success else textSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                IconButton(
-                    onClick = { /* Expand to fullscreen */ },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.Fullscreen,
-                        contentDescription = "Fullscreen",
-                        tint = textSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Code content
-        Text(
-            text = block.code.trim(),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            lineHeight = 20.sp,
-            color = textPrimary,
-            modifier = Modifier.horizontalScroll(rememberScrollState())
-        )
-    }
-}
-
-/**
- * Callout/Alert block
- */
-@Composable
-private fun CalloutBlock(block: MarkdownBlock.Callout, textPrimary: Color) {
-    val tint = block.type.tintProvider(
-        InnovexiaColors.Info,
-        InnovexiaColors.Warning,
-        InnovexiaColors.Success
-    )
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(tint.copy(alpha = 0.1f))
-            .border(1.dp, tint.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            imageVector = block.type.icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
-        Text(
-            text = parseInlineMarkdown(block.text, textPrimary),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 14.sp,
-                color = textPrimary
-            ),
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-/**
- * Collapsible section
- */
-@Composable
-private fun CollapsibleBlock(
-    block: MarkdownBlock.Collapsible,
-    textPrimary: Color,
-    textSecondary: Color,
-    borderColor: Color
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val rotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
-        animationSpec = tween(200),
-        label = "arrow_rotation"
-    )
-
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(borderColor.copy(alpha = 0.06f))
-            .animateContentSize()
-            .clickable { expanded = !expanded }
-            .padding(10.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.ExpandMore,
-                contentDescription = if (expanded) "Collapse" else "Expand",
-                tint = textSecondary,
-                modifier = Modifier
-                    .size(20.dp)
-                    .graphicsLayer { rotationZ = rotation }
-            )
-            Text(
-                text = block.title,
-                color = textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp
-            )
-        }
-        if (expanded) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = parseInlineMarkdown(block.content, textPrimary),
-                color = textPrimary,
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            )
-        }
-    }
-}
-
-/**
- * Table block with horizontal scroll
- */
-@Composable
-private fun TableBlock(
-    block: MarkdownBlock.Table,
-    textPrimary: Color,
-    textSecondary: Color,
-    borderColor: Color
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, borderColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-            .horizontalScroll(rememberScrollState())
-    ) {
-        // Header row
-        Row(
-            modifier = Modifier
-                .background(borderColor.copy(alpha = 0.12f))
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-        ) {
-            block.headers.forEach { header ->
-                Text(
-                    text = header,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimary,
-                        letterSpacing = 0.3.sp
-                    ),
-                    modifier = Modifier
-                        .width(130.dp)
-                        .padding(horizontal = 8.dp)
-                )
-            }
-        }
-
-        HorizontalDivider(color = borderColor.copy(alpha = 0.4f), thickness = 1.dp)
-
-        // Data rows
-        block.rows.forEachIndexed { rowIndex, row ->
-            Row(
-                modifier = Modifier
-                    .background(
-                        if (rowIndex % 2 == 0) Color.Transparent
-                        else borderColor.copy(alpha = 0.04f)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                row.forEach { cell ->
-                    Text(
-                        text = cell,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            color = textPrimary
-                        ),
-                        modifier = Modifier
-                            .width(130.dp)
-                            .padding(horizontal = 8.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Image block with zoom support
- * TODO: Add Coil library for full image loading support
- */
-@Composable
-private fun ImageBlock(block: MarkdownBlock.Image) {
-    // Placeholder for image - will work once Coil is synced
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .border(
-                1.dp,
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                RoundedCornerShape(10.dp)
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Image,
-                contentDescription = "Image",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(32.dp)
-            )
-            if (block.altText != null) {
-                Text(
-                    text = block.altText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
 
 /**
  * Sending indicator - Ultra-smooth Material 3 animation with fun rotating messages
@@ -1032,137 +974,304 @@ private fun TruncationFooter(
 }
 
 /**
- * Parse inline markdown (bold, italic, strikethrough, code, links)
- * Enhanced for better Gemini compatibility
+ * Generate smart related searches from grounding metadata
+ * Always returns exactly 4 high-quality, meaningful searches
  */
-private fun parseInlineMarkdown(text: String, baseColor: Color): AnnotatedString {
-    return buildAnnotatedString {
-        var i = 0
-        while (i < text.length) {
-            when {
-                // Bold + Italic: ***text***
-                text.substring(i).startsWith("***") -> {
-                    val end = text.indexOf("***", i + 3)
-                    if (end != -1 && end > i + 3) {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)) {
-                            append(text.substring(i + 3, end))
-                        }
-                        i = end + 3
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+private fun generateRelatedSearches(
+    metadata: GroundingMetadata?,
+    userQuery: String
+): List<String> {
+    if (metadata == null) return emptyList()
 
-                // Bold: **text**
-                text.substring(i).startsWith("**") -> {
-                    val end = text.indexOf("**", i + 2)
-                    if (end != -1 && end > i + 2) {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(text.substring(i + 2, end))
-                        }
-                        i = end + 2
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+    val searches = mutableListOf<String>()
 
-                // Strikethrough: ~~text~~
-                text.substring(i).startsWith("~~") -> {
-                    val end = text.indexOf("~~", i + 2)
-                    if (end != -1 && end > i + 2) {
-                        withStyle(SpanStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough)) {
-                            append(text.substring(i + 2, end))
-                        }
-                        i = end + 2
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+    // 1. Use web search queries if they're meaningful (not too generic)
+    metadata.webSearchQueries?.let { queries ->
+        queries
+            .filter { it.length > 10 } // Filter out very short queries
+            .filter { !it.contains("site:", ignoreCase = true) } // Remove site-specific searches
+            .filter { !it.startsWith("\"") } // Remove exact match queries
+            .forEach { searches.add(it) }
+    }
 
-                // Italic: *text* (but not **)
-                text.substring(i).startsWith("*") && !text.substring(i).startsWith("**") -> {
-                    val end = text.indexOf("*", i + 1)
-                    if (end != -1 && end > i + 1 && (end >= text.length - 1 || text[end + 1] != '*')) {
-                        withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append(text.substring(i + 1, end))
-                        }
-                        i = end + 1
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+    // 2. Extract topics from source titles (these are real, validated sources)
+    metadata.groundingChunks.forEach { chunk ->
+        val title = chunk.web.title
+        // Extract meaningful phrases from titles
+        if (title.length > 15 && !title.contains("404") && !title.contains("Error")) {
+            // Clean up the title to make it search-friendly
+            val cleanTitle = title
+                .replace(Regex("[|–—-].*"), "") // Remove everything after separator
+                .trim()
+                .take(50) // Limit length for better readability
 
-                // Italic: _text_ (but not at word boundaries for snake_case)
-                text.substring(i).startsWith("_") && (i == 0 || !text[i - 1].isLetterOrDigit()) -> {
-                    val end = text.indexOf("_", i + 1)
-                    if (end != -1 && end > i + 1 && (end >= text.length - 1 || !text[end + 1].isLetterOrDigit())) {
-                        withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append(text.substring(i + 1, end))
-                        }
-                        i = end + 1
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+            if (cleanTitle.length > 10 && cleanTitle.split(" ").size >= 2) {
+                searches.add(cleanTitle)
+            }
+        }
+    }
 
-                // Inline code: `text`
-                text.substring(i).startsWith("`") && !text.substring(i).startsWith("```") -> {
-                    val end = text.indexOf("`", i + 1)
-                    if (end != -1 && end > i + 1) {
-                        // Add padding spaces around inline code
-                        append(" ")
-                        withStyle(
-                            SpanStyle(
-                                fontFamily = FontFamily.Monospace,
-                                background = baseColor.copy(alpha = 0.15f),
-                                fontSize = 13.sp,
-                                color = InnovexiaColors.Info,
-                                fontWeight = FontWeight.Medium
-                            )
-                        ) {
-                            append(" ${text.substring(i + 1, end)} ")
-                        }
-                        append(" ")
-                        i = end + 1
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+    // 3. Filter and ensure exactly 4 quality searches
+    val filteredSearches = searches
+        .filter { it.isNotBlank() }
+        .distinct()
+        .take(4) // Always show exactly 4
+        .toMutableList()
 
-                // Link: [text](url)
-                text.substring(i).startsWith("[") -> {
-                    val textEnd = text.indexOf("]", i + 1)
-                    val urlStart = text.indexOf("(", textEnd)
-                    val urlEnd = text.indexOf(")", urlStart)
-                    if (textEnd != -1 && urlStart == textEnd + 1 && urlEnd != -1) {
-                        withStyle(
-                            SpanStyle(
-                                color = InnovexiaColors.BlueAccent,
-                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                                fontWeight = FontWeight.Medium
-                            )
-                        ) {
-                            append(text.substring(i + 1, textEnd))
-                        }
-                        i = urlEnd + 1
-                    } else {
-                        append(text[i])
-                        i++
-                    }
-                }
+    // 4. If we don't have 4, pad with fallback searches based on the topic
+    while (filteredSearches.size < 4 && metadata.groundingChunks.isNotEmpty()) {
+        val chunk = metadata.groundingChunks.getOrNull(filteredSearches.size)
+        if (chunk != null) {
+            val domain = try {
+                android.net.Uri.parse(chunk.web.uri).host?.replace("www.", "") ?: ""
+            } catch (e: Exception) { "" }
 
-                // Regular text
-                else -> {
-                    append(text[i])
-                    i++
+            if (domain.isNotEmpty() && !filteredSearches.contains(domain)) {
+                filteredSearches.add("$domain insights")
+            }
+        } else {
+            break
+        }
+    }
+
+    return filteredSearches.take(4)
+}
+
+/**
+ * Related Searches Section - Material 3 design with 2x2 grid showing full text
+ * Animated entrance for smooth streaming
+ */
+@Composable
+private fun RelatedSearchesSection(
+    searches: List<String>,
+    textPrimary: Color,
+    textSecondary: Color,
+    dividerColor: Color,
+    isDark: Boolean,
+    onSearchClick: (String) -> Unit
+) {
+    val haptics = LocalHapticFeedback.current
+
+    // Ensure exactly 4 searches for 2x2 grid
+    if (searches.size < 4) return
+
+    // Animated entrance
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(searches) {
+        kotlinx.coroutines.delay(100) // Small delay for smooth appearance
+        isVisible = true
+    }
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
+        label = "related_searches_alpha"
+    )
+
+    val offsetY by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else 20.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "related_searches_offset"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 4.dp)
+            .graphicsLayer {
+                this.alpha = alpha
+                translationY = offsetY.toPx()
+            },
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Material 3 Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Explore,
+                contentDescription = "Related",
+                tint = InnovexiaColors.Gold,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = "Related Searches",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = textPrimary
+                )
+            )
+        }
+
+        // 2x2 Grid - Material 3 Cards with staggered animation
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // First row (2 cards) - cards appear with delay
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(
+                    animationSpec = tween(durationMillis = 300, delayMillis = 50)
+                ) + expandVertically(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    searches.take(2).forEach { query ->
+                        RelatedSearchCard(
+                            query = query,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            isDark = isDark,
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onSearchClick(query)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
+
+            // Second row (2 cards) - appears slightly after first row
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(
+                    animationSpec = tween(durationMillis = 300, delayMillis = 150)
+                ) + expandVertically(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    searches.drop(2).take(2).forEach { query ->
+                        RelatedSearchCard(
+                            query = query,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            isDark = isDark,
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onSearchClick(query)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Material 3 Related Search Card - Shows full text with auto-scaling
+ */
+@Composable
+private fun RelatedSearchCard(
+    query: String,
+    textPrimary: Color,
+    textSecondary: Color,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val cardScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "card_press"
+    )
+
+    // Material 3 Filled Card with outlined style
+    ElevatedCard(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isDark) Color(0xFF1E1E1E) else Color(0xFFFAFAFA),
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 1.dp,
+            pressedElevation = 3.dp
+        ),
+        modifier = modifier
+            .height(90.dp)
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Icon at top
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(InnovexiaColors.Gold.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = null,
+                    tint = InnovexiaColors.Gold,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+
+            // Query text - auto-scales to fit
+            Text(
+                text = query,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 16.sp,
+                    color = textPrimary
+                ),
+                fontSize = when {
+                    query.length <= 20 -> 13.sp
+                    query.length <= 30 -> 12.sp
+                    else -> 11.sp
+                },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                minLines = 2
+            )
+        }
+
+        // Subtle indicator overlay in bottom-right
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ArrowOutward,
+                contentDescription = "Open",
+                tint = InnovexiaColors.Gold.copy(alpha = 0.5f),
+                modifier = Modifier.size(12.dp)
+            )
         }
     }
 }

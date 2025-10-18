@@ -173,8 +173,9 @@ class GeminiRestClient {
                                 GroundingStatus.NONE
                             }
 
-                            // Emit chunk if we have text
-                            if (textChunk.isNotEmpty()) {
+                            // Emit chunk if we have text OR grounding metadata
+                            // (Grounding metadata may arrive in chunks without text)
+                            if (textChunk.isNotEmpty() || (groundingEnabled && groundingMetadata != null)) {
                                 accumulatedText += textChunk
 
                                 emit(StreamChunk(

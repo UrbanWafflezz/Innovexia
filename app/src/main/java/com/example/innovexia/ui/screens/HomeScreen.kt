@@ -1304,13 +1304,13 @@ private fun HomeContent(
                             )
                         } else {
                             // Use ResponseBubbleV2 for regular responses
-                            // Note: HomeScreen uses transient UIMessages, not persisted MessageEntities
-                            // For proper grounding bubble support, messages should be loaded from database (like in ChatScreen)
+                            // Look up grounding metadata by message ID
                             com.example.innovexia.ui.chat.bubbles.ResponseBubbleV2(
                                 message = messageEntity,
                                 isStreaming = message.isStreaming,
                                 messageStatus = message.status,
                                 modelName = message.modelName ?: currentModelName,
+                                groundingMetadata = groundingDataMap[message.id],
                                 onRegenerate = {
                                     // TODO: Implement regenerate functionality in HomeViewModel
                                 }

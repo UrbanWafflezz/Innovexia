@@ -23,7 +23,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.innovexia.data.local.entities.MessageEntity
 import com.example.innovexia.ui.chat.bubbles.BubbleGroupPosition
-import com.example.innovexia.ui.chat.bubbles.GroundingSearchBubble
 import com.example.innovexia.ui.chat.bubbles.MessageBubble
 import com.example.innovexia.ui.chat.bubbles.ResponseBubbleV2
 import com.example.innovexia.ui.chat.bubbles.ResponseBubbleSkeleton
@@ -161,47 +160,9 @@ fun MessageList(
                                     }
 
                                     when {
-                                        // Use GroundingSearchBubble for messages sent with grounding enabled
-                                        // Check multiple sources: database status, in-memory status map, OR grounding metadata presence
-                                        groupedMessage.message.role == "model" && (
-                                            groupedMessage.message.getGroundingStatusEnum() != com.example.innovexia.data.ai.GroundingStatus.NONE ||
-                                            groundingStatusMap[groupedMessage.message.id] != null ||
-                                            groundingDataMap[groupedMessage.message.id] != null
-                                        ) -> {
-                                            android.util.Log.d("MessageList", "✅ Using GroundingSearchBubble for message ${groupedMessage.message.id}")
-                                            val status = groundingStatusMap[groupedMessage.message.id] ?: groupedMessage.message.getGroundingStatusEnum()
-
-                                            if (isStreaming && groupedMessage.message.text.isEmpty()) {
-                                                ResponseBubbleSkeleton()
-                                            } else {
-                                                GroundingSearchBubble(
-                                                    message = groupedMessage.message,
-                                                    isStreaming = isStreaming,
-                                                    groundingMetadata = groundingDataMap[groupedMessage.message.id],
-                                                    groundingStatus = status,
-                                                    modelName = currentModelName,
-                                                    onRegenerate = { messageId ->
-                                                        android.util.Log.d("MessageList", "Regenerate callback (grounding) - messageId=$messageId")
-                                                        onRegenerateAssistant(messageId)
-                                                    },
-                                                    onCopy = { text ->
-                                                        android.util.Log.d("MessageList", "Copy callback (grounding) - text length=${text.length}")
-                                                        clipboardManager.setText(AnnotatedString(text))
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        scope.launch {
-                                                            snackbarHostState.showSnackbar(
-                                                                message = "Copied",
-                                                                duration = SnackbarDuration.Short
-                                                            )
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-
-                                        // Use ResponseBubbleV2 for regular model messages (no grounding)
+                                        // Use ResponseBubbleV2 for ALL model messages (with or without grounding)
                                         groupedMessage.message.role == "model" -> {
-                                            android.util.Log.d("MessageList", "❌ Using ResponseBubbleV2 for message ${groupedMessage.message.id}")
+                                            android.util.Log.d("MessageList", "✅ Using ResponseBubbleV2 for message ${groupedMessage.message.id}")
                                             if (isStreaming && groupedMessage.message.text.isEmpty()) {
                                                 ResponseBubbleSkeleton()
                                             } else {
@@ -210,17 +171,17 @@ fun MessageList(
                                                     isStreaming = isStreaming,
                                                     modelName = currentModelName,
                                                     isTruncated = groupedMessage.message.id in truncatedMessageIds,
+                                                    // Use database field first, fallback to memory map for streaming messages
+                                                    groundingMetadata = groupedMessage.message.groundingMetadata()
+                                                        ?: groundingDataMap[groupedMessage.message.id],
                                                     onRegenerate = { messageId ->
                                                         android.util.Log.d("MessageList", "Regenerate callback - messageId=$messageId")
                                                         onRegenerateAssistant(messageId)
                                                     },
                                                     onCopy = { text ->
                                                         android.util.Log.d("MessageList", "Copy callback - text length=${text.length}")
-                                                        // Copy markdown to clipboard
                                                         clipboardManager.setText(AnnotatedString(text))
-                                                        // Haptic feedback
                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        // Show "Copied" snackbar
                                                         scope.launch {
                                                             snackbarHostState.showSnackbar(
                                                                 message = "Copied",

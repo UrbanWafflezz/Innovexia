@@ -397,11 +397,9 @@ class HomeViewModel(
                                 _groundingStatusMap.value = _groundingStatusMap.value + (modelMsgId to chunk.groundingStatus)
                             }
 
-                            // Store grounding metadata if present AND contains actual data
-                            if (chunk.groundingMetadata != null &&
-                                (chunk.groundingMetadata.webSearchQueries?.isNotEmpty() == true ||
-                                 chunk.groundingMetadata.groundingChunks.isNotEmpty() ||
-                                 chunk.groundingMetadata.searchResultUrls.isNotEmpty())) {
+                            // Store grounding metadata if present
+                            // Don't check if it's empty - we want to capture ALL grounding metadata chunks
+                            if (chunk.groundingMetadata != null) {
                                 finalGroundingMetadata = chunk.groundingMetadata
                                 _groundingDataMap.value = _groundingDataMap.value + (modelMsgId to chunk.groundingMetadata)
                                 android.util.Log.d("HomeViewModel", "🔍 Grounding data captured for message $modelMsgId: ${com.example.innovexia.data.ai.GroundingService.getGroundingSummary(chunk.groundingMetadata)}")
@@ -483,6 +481,7 @@ class HomeViewModel(
                         }
 
                         // Remap grounding data from UI ID to database ID
+                        // IMPORTANT: Also update the message ID in visibleMessages so sources remain visible
                         if (dbMessageId != null && dbMessageId != modelMsgId) {
                             if (finalGroundingMetadata != null) {
                                 _groundingDataMap.value = _groundingDataMap.value - modelMsgId + (dbMessageId to finalGroundingMetadata)
@@ -492,19 +491,30 @@ class HomeViewModel(
                                 _groundingStatusMap.value = _groundingStatusMap.value - modelMsgId + (dbMessageId to status)
                                 android.util.Log.d("HomeViewModel", "Remapped grounding status from $modelMsgId to $dbMessageId")
                             }
-                        }
 
-                        // Database save completed - grounding data is now persisted
-
-                        // Update final visible message
-                        _visibleMessages.value = _visibleMessages.value.map { msg ->
-                            if (msg.id == modelMsgId) {
-                                msg.copy(
-                                    text = _streamingText.value,
-                                    isStreaming = false,
-                                    status = com.example.innovexia.ui.models.MessageStatus.COMPLETE
-                                )
-                            } else msg
+                            // CRITICAL: Update message ID in visible messages to match database ID
+                            // This ensures grounding data remains accessible after streaming
+                            _visibleMessages.value = _visibleMessages.value.map { msg ->
+                                if (msg.id == modelMsgId) {
+                                    msg.copy(
+                                        id = dbMessageId, // Change ID to match database
+                                        text = _streamingText.value,
+                                        isStreaming = false,
+                                        status = com.example.innovexia.ui.models.MessageStatus.COMPLETE
+                                    )
+                                } else msg
+                            }
+                        } else {
+                            // No ID change needed, just update status
+                            _visibleMessages.value = _visibleMessages.value.map { msg ->
+                                if (msg.id == modelMsgId) {
+                                    msg.copy(
+                                        text = _streamingText.value,
+                                        isStreaming = false,
+                                        status = com.example.innovexia.ui.models.MessageStatus.COMPLETE
+                                    )
+                                } else msg
+                            }
                         }
 
                     } catch (e: Exception) {
@@ -757,11 +767,32 @@ class HomeViewModel(
                 _streamingTitle.value = null
                 _errorMessage.value = null
                 _isStreaming.value = false
+                _groundingDataMap.value = emptyMap()
+                _groundingStatusMap.value = emptyMap()
                 streamingJob?.cancel()
 
                 // Load messages from database by collecting the flow
                 val messages = mutableListOf<com.example.innovexia.data.local.entities.MessageEntity>()
                 chatRepository.messagesForChat(chatId).first().let { messages.addAll(it) }
+
+                // Build grounding data map from loaded messages
+                val groundingMap = mutableMapOf<String, com.example.innovexia.data.ai.GroundingMetadata>()
+                val statusMap = mutableMapOf<String, com.example.innovexia.data.ai.GroundingStatus>()
+                messages.forEach { msg ->
+                    // Load grounding metadata from database field
+                    msg.groundingMetadata()?.let { metadata ->
+                        groundingMap[msg.id] = metadata
+                        android.util.Log.d("HomeViewModel", "Loaded grounding data for message ${msg.id}")
+                    }
+                    // Load grounding status
+                    val status = msg.getGroundingStatusEnum()
+                    if (status != com.example.innovexia.data.ai.GroundingStatus.NONE) {
+                        statusMap[msg.id] = status
+                    }
+                }
+                _groundingDataMap.value = groundingMap
+                _groundingStatusMap.value = statusMap
+
                 _visibleMessages.value = messages.map { msg ->
                     com.example.innovexia.ui.models.UIMessage(
                         id = msg.id,

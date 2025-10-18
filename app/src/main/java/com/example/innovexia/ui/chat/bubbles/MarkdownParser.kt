@@ -91,7 +91,8 @@ object MarkdownParser {
                         i++
                     }
                     if (quoteLines.isNotEmpty()) {
-                        blocks.add(MarkdownBlock.Quote(quoteLines.joinToString(" ")))
+                        // Preserve line breaks in quotes by joining with newline
+                        blocks.add(MarkdownBlock.Quote(quoteLines.joinToString("\n")))
                     }
                 }
 
