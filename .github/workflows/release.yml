@@ -90,7 +90,7 @@ jobs:
           files: release-apks/*.apk
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
           body: |
             ## Download
 
@@ -102,8 +102,23 @@ jobs:
             3. Open the downloaded APK to install
             4. You may need to grant installation permissions
 
-            ### What's Changed
-            See the changelog below for all changes in this release.
+            ---
+
+            ## What's New in This Release
+
+            ### Fixes
+            - **Security Enhancement**: Removed HTTP logging interceptor from release builds to prevent sensitive data exposure in production
+            - **Improved Performance**: Release builds now run faster without debug logging overhead
+            - **Build Optimization**: Cleaned up build configuration for better APK size and performance
+
+            ### Notes
+            - This is a **signed release APK** (not a debug build)
+            - All releases are automatically built and signed via GitHub Actions
+            - APK is fully minified and optimized with ProGuard
+
+            ---
+
+            See the full changelog below for all changes in this release.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
