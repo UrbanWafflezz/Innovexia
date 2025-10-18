@@ -1304,13 +1304,15 @@ private fun HomeContent(
                             )
                         } else {
                             // Use ResponseBubbleV2 for regular responses
-                            // Look up grounding metadata by message ID
+                            // Look up grounding metadata and status by message ID
                             com.example.innovexia.ui.chat.bubbles.ResponseBubbleV2(
                                 message = messageEntity,
                                 isStreaming = message.isStreaming,
                                 messageStatus = message.status,
                                 modelName = message.modelName ?: currentModelName,
                                 groundingMetadata = groundingDataMap[message.id],
+                                groundingStatus = groundingStatusMap[message.id]
+                                    ?: com.example.innovexia.data.ai.GroundingStatus.NONE,
                                 onRegenerate = {
                                     // TODO: Implement regenerate functionality in HomeViewModel
                                 }

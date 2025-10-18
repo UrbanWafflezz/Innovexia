@@ -365,8 +365,23 @@ class HomeViewModel(
                         android.util.Log.d("HomeViewModel", "Starting generateReplyWithTokens stream - chatId=$chatId, model=$currentModel, temp=$currentTemp, maxTokens=$currentMaxTokens, safety=$currentSafety, grounding=$currentGroundingEnabled")
 
                         // Set initial grounding status if grounding is enabled
-                        if (currentGroundingEnabled) {
-                            _groundingStatusMap.value = _groundingStatusMap.value + (modelMsgId to com.example.innovexia.data.ai.GroundingStatus.SEARCHING)
+                        if (currentGroundingEnabled && consented) {
+                            // Create empty model message in DB with SEARCHING status so UI shows indicator immediately
+                            // Pass messageId=null to CREATE a new message, it returns the new ID
+                            val newDbId = chatRepository.appendModelToken(
+                                chatId = chatId,
+                                messageId = null,
+                                token = "",
+                                isFinal = false,
+                                groundingStatus = com.example.innovexia.data.ai.GroundingStatus.SEARCHING
+                            )
+                            dbMessageId = newDbId
+
+                            // CRITICAL: Set grounding status for the DB message ID (not the UI message ID!)
+                            android.util.Log.d("HomeViewModel", "🔍 Setting initial SEARCHING status for DB message $newDbId")
+                            _groundingStatusMap.value = _groundingStatusMap.value + (newDbId to com.example.innovexia.data.ai.GroundingStatus.SEARCHING)
+
+                            android.util.Log.d("HomeViewModel", "✅ Created initial DB message with SEARCHING status, dbMessageId=$newDbId (UI modelMsgId=$modelMsgId)")
                         }
 
                         // Stream response from Gemini with memory context and user-selected model

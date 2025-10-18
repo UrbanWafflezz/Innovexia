@@ -103,8 +103,12 @@ fun SettingsDialog(
     val isGuest = user == null
 
     // Filter tabs based on guest mode
+    // System Health is now available to all users (including guests)
     val allTabs = if (isGuest) {
-        listOf(SettingsTab.Account)
+        listOf(
+            SettingsTab.Account,
+            SettingsTab.SystemHealth
+        )
     } else {
         listOf(
             SettingsTab.Account,
@@ -363,7 +367,7 @@ private fun AccountTabBody(
                             color = if (darkTheme) DarkColors.AccentBlue else LightColors.AccentBlue
                         )
                         Text(
-                            text = "• Cloud Sync\n• AI Settings\n• Privacy Controls\n• System Health",
+                            text = "• Cloud Sync\n• AI Settings\n• Privacy Controls\n• Notifications",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
                         )
@@ -820,6 +824,8 @@ private fun SystemHealthTabWrapper(darkTheme: Boolean) {
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val lastRefresh by viewModel.lastRefresh.collectAsState()
     val isConnected by app.connectivity.isConnected.collectAsState()
+    val totalIncidents by viewModel.totalIncidents.collectAsState()
+    val uptimeSince by viewModel.uptimeSince.collectAsState()
 
     // Start foreground monitoring
     LaunchedEffect(Unit) {
@@ -842,7 +848,9 @@ private fun SystemHealthTabWrapper(darkTheme: Boolean) {
         isConnected = isConnected,
         onRefresh = { viewModel.refreshAll() },
         onCheckService = { serviceId -> viewModel.checkService(serviceId) },
-        darkTheme = darkTheme
+        darkTheme = darkTheme,
+        totalIncidents = totalIncidents,
+        uptimeSince = uptimeSince
     )
 }
 

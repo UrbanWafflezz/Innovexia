@@ -78,7 +78,8 @@ class UpdateChecker(private val context: Context) {
         try {
             Log.d(TAG, "Checking for updates from GitHub...")
 
-            val response = api.getLatestRelease(OWNER, REPO)
+            // Fetch ALL releases to handle beta/stable properly
+            val response = api.getAllReleases(OWNER, REPO)
 
             if (!response.isSuccessful) {
                 val errorMsg = when (response.code()) {
@@ -92,58 +93,96 @@ class UpdateChecker(private val context: Context) {
                 return@withContext UpdateCheckResult.Error(errorMsg)
             }
 
-            val release = response.body() ?: run {
+            val releases = response.body() ?: run {
                 Log.e(TAG, "Empty response body")
                 return@withContext UpdateCheckResult.Error("Empty response from GitHub")
+            }
+
+            if (releases.isEmpty()) {
+                Log.e(TAG, "No releases available")
+                return@withContext UpdateCheckResult.Error("No releases found for this app.")
             }
 
             // Update last checked timestamp
             prefs.edit().putLong(KEY_LAST_CHECKED, System.currentTimeMillis()).apply()
 
             val currentVersion = BuildConfig.VERSION_NAME
-            val latestVersion = release.tagName.removePrefix("v")
+            val currentIsBeta = isBetaVersion(currentVersion)
 
-            Log.d(TAG, "Current version: $currentVersion, Latest version: $latestVersion")
+            Log.d(TAG, "Current version: $currentVersion (beta: $currentIsBeta)")
+            Log.d(TAG, "Found ${releases.size} releases")
 
-            // Find APK asset in release
-            val apkAsset = release.assets.firstOrNull { it.name.endsWith(".apk") }
-
-            if (apkAsset == null) {
-                Log.w(TAG, "No APK file found in release assets")
-                return@withContext UpdateCheckResult.Error("No APK file available for download")
+            // Filter releases that have APK assets
+            val validReleases = releases.filter { release ->
+                release.assets.any { it.name.endsWith(".apk") }
             }
 
-            val downloadUrl = apkAsset.downloadUrl
+            if (validReleases.isEmpty()) {
+                Log.w(TAG, "No releases with APK files found")
+                return@withContext UpdateCheckResult.Error("No APK files available for download")
+            }
+
+            // Find the best update candidate
+            // Priority:
+            // 1. If user is on beta, prefer same version stable release OR newer versions
+            // 2. If user is on stable, only show newer stable releases
+            val bestRelease = validReleases
+                .filter { release ->
+                    val releaseVersion = release.tagName.removePrefix("v")
+                    val shouldShow = shouldShowUpdate(currentVersion, releaseVersion, release.prerelease)
+
+                    if (shouldShow) {
+                        Log.d(TAG, "Release ${releaseVersion} is a valid update (prerelease: ${release.prerelease})")
+                    }
+
+                    shouldShow
+                }
+                .maxByOrNull { release ->
+                    // Sort by version, preferring stable over beta for same version
+                    val releaseVersion = release.tagName.removePrefix("v")
+                    val versionParts = releaseVersion.split(".").mapNotNull { it.toIntOrNull() }
+                    val versionScore = versionParts.getOrNull(0)?.let { major ->
+                        major * 1000000 + (versionParts.getOrNull(1) ?: 0) * 1000 + (versionParts.getOrNull(2) ?: 0)
+                    } ?: 0
+
+                    // Add bonus for stable releases
+                    val stabilityBonus = if (!release.prerelease) 100 else 0
+
+                    versionScore + stabilityBonus
+                }
+
+            if (bestRelease == null) {
+                Log.d(TAG, "No valid updates found - already on latest version")
+                return@withContext UpdateCheckResult.NoUpdateAvailable
+            }
+
+            val latestVersion = bestRelease.tagName.removePrefix("v")
+            val apkAsset = bestRelease.assets.first { it.name.endsWith(".apk") }
+
+            Log.d(TAG, "Update available: $latestVersion (prerelease: ${bestRelease.prerelease})")
 
             val updateInfo = UpdateInfo(
                 currentVersion = currentVersion,
                 latestVersion = latestVersion,
-                downloadUrl = downloadUrl,
-                releaseNotes = release.body,
-                releasePageUrl = release.htmlUrl,
+                downloadUrl = apkAsset.downloadUrl,
+                releaseNotes = bestRelease.body,
+                releasePageUrl = bestRelease.htmlUrl,
                 apkSize = apkAsset.size
             )
 
-            if (updateInfo.isUpdateAvailable) {
-                Log.d(TAG, "Update available: $latestVersion")
-
-                // Track first detection time for this version
-                val detectedVersion = prefs.getString(KEY_DETECTED_VERSION, null)
-                if (detectedVersion != latestVersion) {
-                    // New version detected - reset tracking
-                    prefs.edit()
-                        .putString(KEY_DETECTED_VERSION, latestVersion)
-                        .putLong(KEY_FIRST_DETECTED, System.currentTimeMillis())
-                        .remove(KEY_REMIND_LATER)
-                        .apply()
-                    Log.d(TAG, "First time detecting version $latestVersion")
-                }
-
-                return@withContext UpdateCheckResult.UpdateAvailable(updateInfo)
-            } else {
-                Log.d(TAG, "Already on latest version")
-                return@withContext UpdateCheckResult.NoUpdateAvailable
+            // Track first detection time for this version
+            val detectedVersion = prefs.getString(KEY_DETECTED_VERSION, null)
+            if (detectedVersion != latestVersion) {
+                // New version detected - reset tracking
+                prefs.edit()
+                    .putString(KEY_DETECTED_VERSION, latestVersion)
+                    .putLong(KEY_FIRST_DETECTED, System.currentTimeMillis())
+                    .remove(KEY_REMIND_LATER)
+                    .apply()
+                Log.d(TAG, "First time detecting version $latestVersion")
             }
+
+            return@withContext UpdateCheckResult.UpdateAvailable(updateInfo)
 
         } catch (e: Exception) {
             val errorMsg = when {

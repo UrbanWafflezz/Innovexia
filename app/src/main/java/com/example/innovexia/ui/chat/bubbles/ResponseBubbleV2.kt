@@ -66,6 +66,7 @@ fun ResponseBubbleV2(
     modelName: String = "Innovexia",
     isTruncated: Boolean = false,
     groundingMetadata: GroundingMetadata? = null,
+    groundingStatus: com.example.innovexia.data.ai.GroundingStatus = com.example.innovexia.data.ai.GroundingStatus.NONE,
     onRegenerate: (String) -> Unit = {},
     onCopy: (String) -> Unit = {},
     onContinue: (String) -> Unit = {}
@@ -246,7 +247,29 @@ fun ResponseBubbleV2(
 
                 // Show "Sending..." if in SENDING state, otherwise show content
                 if (isSending) {
+                    // Debug logging
+                    android.util.Log.d("ResponseBubbleV2", "📍 isSending=true for message ${message.id}")
+                    android.util.Log.d("ResponseBubbleV2", "  groundingStatus=$groundingStatus")
+                    android.util.Log.d("ResponseBubbleV2", "  sources.size=${sources.size}")
+                    android.util.Log.d("ResponseBubbleV2", "  groundingMetadata=${groundingMetadata != null}")
+
                     SendingIndicator(textSecondary = textSecondary)
+
+                    // Show sources as they're discovered during web search
+                    // Show indicator when grounding is active (SEARCHING or SUCCESS with sources)
+                    if (groundingStatus == com.example.innovexia.data.ai.GroundingStatus.SEARCHING ||
+                        (groundingStatus == com.example.innovexia.data.ai.GroundingStatus.SUCCESS && sources.isNotEmpty())) {
+                        android.util.Log.d("ResponseBubbleV2", "  ✅ Showing ThinkingSourcesIndicator")
+                        ThinkingSourcesIndicator(
+                            sources = sources,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            isDark = isDark,
+                            isSearching = groundingStatus == com.example.innovexia.data.ai.GroundingStatus.SEARCHING
+                        )
+                    } else {
+                        android.util.Log.d("ResponseBubbleV2", "  ❌ NOT showing ThinkingSourcesIndicator")
+                    }
                 } else if (streaming && message.text.isBlank()) {
                     // Show skeleton while regenerating with no text yet
                     ResponseBubbleSkeleton(textSecondary)
@@ -865,6 +888,186 @@ private fun SendingIndicator(textSecondary: Color) {
                     alpha = textAlpha
                 }
             )
+        }
+    }
+}
+
+/**
+ * Thinking Sources Indicator - Shows sources as they're discovered during web search
+ * Beautiful animated cards that fade in as sources arrive
+ */
+@Composable
+private fun ThinkingSourcesIndicator(
+    sources: List<SourceItem>,
+    textPrimary: Color,
+    textSecondary: Color,
+    isDark: Boolean,
+    isSearching: Boolean = false
+) {
+    // Animated visibility for the entire sources section
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(200) // Small delay for smooth appearance
+        isVisible = true
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(
+            animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing)
+        ) + expandVertically(
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header with search icon
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.TravelExplore,
+                    contentDescription = "Searching",
+                    tint = InnovexiaColors.Gold,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = if (isSearching && sources.isEmpty()) {
+                        "Searching the web..."
+                    } else {
+                        "Found ${sources.size} ${if (sources.size == 1) "source" else "sources"}"
+                    },
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        color = textSecondary,
+                        fontStyle = if (isSearching && sources.isEmpty()) FontStyle.Italic else FontStyle.Normal
+                    )
+                )
+            }
+
+            // Animated source cards with staggered entrance
+            sources.forEachIndexed { index, source ->
+                var cardVisible by remember { mutableStateOf(false) }
+                LaunchedEffect(source) {
+                    kotlinx.coroutines.delay((index * 100).toLong()) // Stagger by 100ms
+                    cardVisible = true
+                }
+
+                val cardAlpha by animateFloatAsState(
+                    targetValue = if (cardVisible) 1f else 0f,
+                    animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+                    label = "card_alpha_$index"
+                )
+
+                val cardOffsetY by animateDpAsState(
+                    targetValue = if (cardVisible) 0.dp else 12.dp,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "card_offset_$index"
+                )
+
+                val cardScale by animateFloatAsState(
+                    targetValue = if (cardVisible) 1f else 0.92f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "card_scale_$index"
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isDark) Color(0xFF252A30) else Color(0xFFF0F0F2),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 1.dp,
+                    border = BorderStroke(
+                        1.dp,
+                        if (isDark) Color(0xFF3A3A3C).copy(alpha = 0.4f) else Color(0xFFE5E5EA).copy(alpha = 0.6f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = cardAlpha
+                            translationY = cardOffsetY.toPx()
+                            scaleX = cardScale
+                            scaleY = cardScale
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Number badge
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(InnovexiaColors.BlueAccent.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${index + 1}",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = InnovexiaColors.BlueAccent
+                                )
+                            )
+                        }
+
+                        // Source info
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = source.title,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp,
+                                    color = textPrimary
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Link,
+                                    contentDescription = null,
+                                    tint = InnovexiaColors.BlueAccent.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Text(
+                                    text = source.domain,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 10.sp,
+                                        color = textSecondary.copy(alpha = 0.8f)
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

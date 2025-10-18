@@ -201,6 +201,7 @@ class InnovexiaApplication : Application() {
         scheduleHealthMonitoring()
         scheduleEntitlementChecks()
         scheduleUpdateChecks()
+        scheduleLocationUpdatesPublic()
         seedInnoPersona()
     }
 
@@ -310,5 +311,42 @@ class InnovexiaApplication : Application() {
         )
 
         android.util.Log.d("InnovexiaApplication", "Scheduled background update checks (every 12 hours)")
+    }
+
+    /**
+     * Schedule periodic location updates for fresh GPS data.
+     * Only runs if location permission is granted (checked in worker).
+     */
+    fun scheduleLocationUpdatesPublic() {
+        // Only schedule if location permission is granted
+        val hasPermission = com.example.innovexia.core.permissions.PermissionHelper.hasLocationPermission(this)
+
+        if (!hasPermission) {
+            android.util.Log.d("InnovexiaApplication", "Location permission not granted - skipping location worker scheduling")
+            return
+        }
+
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)  // Don't run if battery is low
+            .build()
+
+        val locationWorkRequest = PeriodicWorkRequestBuilder<com.example.innovexia.workers.LocationUpdateWorker>(
+            15, TimeUnit.MINUTES  // Update location every 15 minutes
+        )
+            .setConstraints(constraints)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                WorkRequest.MIN_BACKOFF_MILLIS,
+                TimeUnit.MILLISECONDS
+            )
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.example.innovexia.workers.LocationUpdateWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            locationWorkRequest
+        )
+
+        android.util.Log.d("InnovexiaApplication", "✓ Scheduled background location updates (every 15 minutes)")
     }
 }

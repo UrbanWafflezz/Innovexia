@@ -23,7 +23,8 @@ class Retriever(
 ) {
 
     /**
-     * Recall memories for a query using hybrid ranking
+     * Recall memories for a query using hybrid ranking.
+     * Supports temporal queries like "yesterday", "last week", "December 15", etc.
      */
     suspend fun recall(
         personaId: String,
@@ -34,6 +35,23 @@ class Retriever(
         val normalized = Normalizers.normalize(query)
         val now = System.currentTimeMillis()
 
+        // Check if this is a temporal query (e.g., "yesterday", "last week", "December 15")
+        val temporalQuery = TemporalQueryParser.parse(query)
+
+        if (temporalQuery != null) {
+            // TEMPORAL MODE: Query is time-based, prioritize time filtering
+            android.util.Log.d("Retriever", "Detected temporal query: ${temporalQuery.description} (${temporalQuery.startTimeMs} to ${temporalQuery.endTimeMs})")
+            return recallTemporalMemories(
+                personaId = personaId,
+                userId = userId,
+                query = normalized,
+                temporalQuery = temporalQuery,
+                now = now,
+                k = k
+            )
+        }
+
+        // STANDARD MODE: Semantic retrieval with recency weighting
         // Get candidates from FTS
         val ftsIds = try {
             ftsDao.search(personaId, userId, normalized, config.kFts)
@@ -83,6 +101,116 @@ class Retriever(
         }
 
         return scored.sortedByDescending { it.score }.take(k)
+    }
+
+    /**
+     * Recall memories for temporal queries (time-range based retrieval).
+     * First filters by time, then applies semantic ranking within that subset.
+     */
+    private suspend fun recallTemporalMemories(
+        personaId: String,
+        userId: String,
+        query: String,
+        temporalQuery: TemporalQueryParser.TemporalQuery,
+        now: Long,
+        k: Int
+    ): List<MemoryHit> {
+        // Step 1: Get all memories within the specified time range
+        // Use a generous limit since we'll apply semantic ranking afterward
+        val timeFilteredMemories = memoryDao.getMemoriesBetweenTimes(
+            personaId = personaId,
+            userId = userId,
+            startTimeMs = temporalQuery.startTimeMs,
+            endTimeMs = temporalQuery.endTimeMs,
+            limit = 500 // Get up to 500 memories in time range
+        )
+
+        if (timeFilteredMemories.isEmpty()) {
+            android.util.Log.d("Retriever", "No memories found in time range ${temporalQuery.description}")
+            return emptyList()
+        }
+
+        android.util.Log.d("Retriever", "Found ${timeFilteredMemories.size} memories in time range ${temporalQuery.description}")
+
+        // Step 2: Apply semantic ranking within the time-filtered results
+        // Get FTS candidates (only from time-filtered set)
+        val timeFilteredIds = timeFilteredMemories.map { it.id }.toSet()
+        val ftsIds = try {
+            ftsDao.search(personaId, userId, query, config.kFts).filter { it in timeFilteredIds }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        // Get vector candidates
+        val queryEmbedding = embedder.embed(query)
+        val (queryQ8, queryScale) = Quantizer.quantize(queryEmbedding)
+
+        // Score memories within time range
+        val scored = timeFilteredMemories.map { memory ->
+            // For temporal queries, we want to:
+            // 1. Prioritize semantic match (FTS + vector)
+            // 2. Sort by time (chronological) rather than recency score
+            // 3. Still consider importance
+
+            var score = 0.0
+
+            // FTS match
+            if (memory.id in ftsIds) {
+                score += config.w1Bm25
+            }
+
+            // Vector similarity
+            val memVec = vectorDao.getByMemoryId(memory.id)
+            if (memVec != null) {
+                try {
+                    val cosine = Quantizer.cosineSimilarity(
+                        queryQ8, queryScale, memVec.q8, memVec.scale
+                    )
+                    score += config.w2Cosine * cosine
+                } catch (e: Exception) {
+                    // Dimension mismatch - skip vector scoring
+                }
+            }
+
+            // For temporal queries, use chronological ordering instead of recency decay
+            // Normalize timestamp to [0, 1] within the time range for consistent scoring
+            val timeRangeMs = temporalQuery.endTimeMs - temporalQuery.startTimeMs
+            val positionInRange = if (timeRangeMs > 0) {
+                (memory.createdAt - temporalQuery.startTimeMs).toDouble() / timeRangeMs
+            } else {
+                0.5 // Single point in time
+            }
+            // Give slight preference to more recent memories within the range
+            score += config.w3Recency * positionInRange
+
+            // Importance
+            score += config.w4Importance * memory.importance
+
+            MemoryHit(
+                memory = memory.toMemory(),
+                score = score,
+                fromChatTitle = null
+            )
+        }
+
+        // Sort by score (if semantic match) or by time (if no semantic match)
+        val sorted = if (ftsIds.isNotEmpty() || scored.any { it.score > 0.0 }) {
+            // Has semantic matches - sort by score
+            scored.sortedByDescending { it.score }
+        } else {
+            // No semantic matches - sort chronologically (newest first within time range)
+            scored.sortedByDescending { it.memory.createdAt }
+        }
+
+        val topMemories = sorted.take(k)
+
+        // Update last accessed
+        val topIds = topMemories.map { it.memory.id }
+        if (topIds.isNotEmpty()) {
+            memoryDao.updateLastAccessed(topIds, now)
+        }
+
+        return topMemories
     }
 
     /**

@@ -275,17 +275,25 @@ class MemoryAssembler(private val database: AppDatabase) {
     }
 
     /**
-     * Format memory timestamp for AI context
+     * Format memory timestamp for AI context with precise temporal information
      * - Today: "2:30 PM today"
      * - Yesterday: "yesterday at 3:15 PM"
      * - This week: "Tuesday at 10:00 AM"
-     * - Older: "Dec 15, 2024 at 2:30 PM"
+     * - Recent (7-30 days): "Monday, Dec 15 at 2:30 PM"
+     * - Older (same year): "Dec 15 at 2:30 PM"
+     * - Different year: "Dec 15, 2024 at 2:30 PM" (always includes year for clarity)
      */
     private fun formatMemoryTimestamp(timestampMillis: Long): String {
         val now = System.currentTimeMillis()
         val diff = now - timestampMillis
         val hours24 = 24 * 60 * 60 * 1000L
         val days7 = 7 * 24 * 60 * 60 * 1000L
+        val days30 = 30 * 24 * 60 * 60 * 1000L
+
+        // Get calendars for year comparison
+        val nowCal = java.util.Calendar.getInstance()
+        val memCal = java.util.Calendar.getInstance().apply { timeInMillis = timestampMillis }
+        val sameYear = nowCal.get(java.util.Calendar.YEAR) == memCal.get(java.util.Calendar.YEAR)
 
         return when {
             diff < hours24 -> {
@@ -294,17 +302,30 @@ class MemoryAssembler(private val database: AppDatabase) {
                 "${sdf.format(java.util.Date(timestampMillis))} today"
             }
             diff < hours24 * 2 -> {
-                // Yesterday
+                // Yesterday: Show time with "yesterday"
                 val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
                 "yesterday at ${sdf.format(java.util.Date(timestampMillis))}"
             }
             diff < days7 -> {
-                // This week: Show day name
+                // This week (2-7 days ago): Show day name and time
                 val sdf = java.text.SimpleDateFormat("EEEE 'at' h:mm a", java.util.Locale.getDefault())
                 sdf.format(java.util.Date(timestampMillis))
             }
+            diff < days30 && sameYear -> {
+                // Recent (7-30 days, same year): Show day name, month, day, and time
+                // E.g., "Monday, Dec 15 at 2:30 PM"
+                val sdf = java.text.SimpleDateFormat("EEEE, MMM d 'at' h:mm a", java.util.Locale.getDefault())
+                sdf.format(java.util.Date(timestampMillis))
+            }
+            sameYear -> {
+                // This year but older than 30 days: Show month, day, and time (no year needed)
+                // E.g., "Dec 15 at 2:30 PM"
+                val sdf = java.text.SimpleDateFormat("MMM d 'at' h:mm a", java.util.Locale.getDefault())
+                sdf.format(java.util.Date(timestampMillis))
+            }
             else -> {
-                // Older: Full date
+                // Different year: Always include year for precise temporal context
+                // E.g., "Dec 15, 2024 at 2:30 PM" or "Jan 3, 2023 at 9:15 AM"
                 val sdf = java.text.SimpleDateFormat("MMM d, yyyy 'at' h:mm a", java.util.Locale.getDefault())
                 sdf.format(java.util.Date(timestampMillis))
             }

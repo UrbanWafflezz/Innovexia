@@ -17,7 +17,9 @@ data class GitHubRelease(
     @SerializedName("assets")
     val assets: List<ReleaseAsset>,
     @SerializedName("published_at")
-    val publishedAt: String
+    val publishedAt: String,
+    @SerializedName("prerelease")
+    val prerelease: Boolean = false
 )
 
 data class ReleaseAsset(
@@ -39,10 +41,7 @@ data class UpdateInfo(
     val releaseNotes: String?,
     val releasePageUrl: String,
     val apkSize: Long? = null
-) {
-    val isUpdateAvailable: Boolean
-        get() = compareVersions(currentVersion, latestVersion) < 0
-}
+)
 
 /**
  * Update preferences
@@ -52,6 +51,28 @@ data class UpdatePreferences(
     val remindLaterTimestamp: Long = 0L,
     val dismissedVersion: String? = null
 )
+
+/**
+ * Check if a version string is a beta/pre-release version
+ */
+fun isBetaVersion(version: String): Boolean {
+    val vClean = version.removePrefix("v").trim().lowercase()
+    return vClean.contains("-beta") ||
+            vClean.contains("-alpha") ||
+            vClean.contains("-rc") ||
+            vClean.contains("-dev") ||
+            vClean.contains("_beta") ||
+            vClean.contains("_alpha")
+}
+
+/**
+ * Extract the base version number without pre-release suffixes
+ * e.g., "1.1.1-beta" -> "1.1.1"
+ */
+fun getBaseVersion(version: String): String {
+    val vClean = version.removePrefix("v").trim()
+    return vClean.split("-", "_").firstOrNull() ?: vClean
+}
 
 /**
  * Compare two semantic versions (e.g., "1.0.2" vs "1.0.3")
@@ -106,5 +127,35 @@ fun compareVersions(version1: String, version2: String): Int {
         // Fallback to string comparison if parsing fails
         android.util.Log.w("UpdateModels", "Failed to parse versions: $version1 vs $version2", e)
         return version1.compareTo(version2)
+    }
+}
+
+/**
+ * Determine if an update should be shown based on current and target versions
+ * This handles the case where:
+ * - User on beta (e.g., 1.1.1-beta) should be offered stable (1.1.1)
+ * - User on stable should only see newer stable versions
+ * Returns true if update should be shown
+ */
+fun shouldShowUpdate(currentVersion: String, targetVersion: String, targetIsPrerelease: Boolean): Boolean {
+    val currentIsBeta = isBetaVersion(currentVersion)
+    val currentBase = getBaseVersion(currentVersion)
+    val targetBase = getBaseVersion(targetVersion)
+
+    // Compare base versions
+    val baseComparison = compareVersions(currentBase, targetBase)
+
+    return when {
+        // Target version is newer - always show
+        baseComparison < 0 -> true
+
+        // Same base version
+        baseComparison == 0 -> {
+            // If current is beta and target is stable, show the update (migrate to stable)
+            currentIsBeta && !targetIsPrerelease
+        }
+
+        // Target version is older - never show
+        else -> false
     }
 }

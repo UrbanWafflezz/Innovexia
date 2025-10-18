@@ -72,6 +72,13 @@ class MainActivity : ComponentActivity() {
 
             if (!granted) {
                 Log.w("MainActivity", "Permission $permission was denied")
+            } else {
+                // If location permission was granted, schedule background location worker
+                if (permission == Manifest.permission.ACCESS_COARSE_LOCATION ||
+                    permission == Manifest.permission.ACCESS_FINE_LOCATION) {
+                    Log.d("MainActivity", "Location permission granted - scheduling background location updates")
+                    (application as InnovexiaApplication).scheduleLocationUpdatesPublic()
+                }
             }
         }
     }
@@ -201,6 +208,16 @@ class MainActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.CAMERA)
+        }
+
+        // Location permission (for AI context and grounding)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
         // Request permissions if any are missing

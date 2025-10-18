@@ -1044,13 +1044,34 @@ class GeminiService(
                 android.util.Log.d("GeminiService", "Location permission granted: $hasPermission")
 
                 if (hasPermission) {
-                    val loc = com.example.innovexia.core.permissions.PermissionHelper.getCurrentLocation(context)
-                    if (loc != null) {
-                        android.util.Log.d("GeminiService", "✓ Location retrieved: ${loc.latitude}, ${loc.longitude}, accuracy: ${loc.accuracy}m")
+                    // Try cached location first (instant retrieval, no GPS wait)
+                    val cachedLoc = com.example.innovexia.core.location.LocationCacheManager.getLastKnownLocation(context)
+
+                    if (cachedLoc != null) {
+                        android.util.Log.d("GeminiService", "✓ Using cached location: ${cachedLoc.latitude}, ${cachedLoc.longitude}, accuracy: ${cachedLoc.accuracy}m")
+                        cachedLoc
                     } else {
-                        android.util.Log.w("GeminiService", "Location permission granted but getCurrentLocation returned null")
+                        // Cache miss or stale - fetch fresh location from GPS
+                        android.util.Log.d("GeminiService", "Cache miss/stale - fetching fresh GPS location")
+                        val freshLoc = com.example.innovexia.core.permissions.PermissionHelper.getCurrentLocation(context)
+
+                        if (freshLoc != null) {
+                            // Update cache with fresh location for next time
+                            com.example.innovexia.core.location.LocationCacheManager.updateLocation(context, freshLoc)
+                            android.util.Log.d("GeminiService", "✓ Fresh location retrieved and cached: ${freshLoc.latitude}, ${freshLoc.longitude}, accuracy: ${freshLoc.accuracy}m")
+                            freshLoc
+                        } else {
+                            // GPS failed - try to use stale cached location as fallback
+                            android.util.Log.w("GeminiService", "GPS failed - checking for stale cached location")
+                            val staleLoc = com.example.innovexia.core.location.LocationCacheManager.getLastKnownLocationAnyAge(context)
+                            if (staleLoc != null) {
+                                android.util.Log.w("GeminiService", "Using stale cached location as fallback (age: ${(System.currentTimeMillis() - staleLoc.time) / 1000}s)")
+                            } else {
+                                android.util.Log.w("GeminiService", "No location available (GPS failed and no cache)")
+                            }
+                            staleLoc
+                        }
                     }
-                    loc
                 } else {
                     android.util.Log.w("GeminiService", "Location permission not granted - location context will not be available")
                     null

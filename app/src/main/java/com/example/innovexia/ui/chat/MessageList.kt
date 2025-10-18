@@ -174,6 +174,9 @@ fun MessageList(
                                                     // Use database field first, fallback to memory map for streaming messages
                                                     groundingMetadata = groupedMessage.message.groundingMetadata()
                                                         ?: groundingDataMap[groupedMessage.message.id],
+                                                    groundingStatus = groupedMessage.message.getGroundingStatusEnum()
+                                                        ?: groundingStatusMap[groupedMessage.message.id]
+                                                        ?: com.example.innovexia.data.ai.GroundingStatus.NONE,
                                                     onRegenerate = { messageId ->
                                                         android.util.Log.d("MessageList", "Regenerate callback - messageId=$messageId")
                                                         onRegenerateAssistant(messageId)

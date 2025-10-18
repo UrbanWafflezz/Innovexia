@@ -365,6 +365,21 @@ class ChatViewModel(
                 val modelMsgId = java.util.UUID.randomUUID().toString()
                 _streamingMessageId.value = modelMsgId
 
+                // Set initial grounding status in state map if grounding is enabled
+                if (_groundingEnabled.value) {
+                    android.util.Log.d("ChatViewModel", "🔍 Setting initial SEARCHING status for message $modelMsgId")
+                    _groundingStatusMap.value = _groundingStatusMap.value + (modelMsgId to com.example.innovexia.data.ai.GroundingStatus.SEARCHING)
+
+                    // Create empty model message in DB with SEARCHING status so UI shows indicator immediately
+                    chatRepository.appendModelToken(
+                        chatId = chatId,
+                        messageId = modelMsgId,
+                        token = "",
+                        isFinal = false,
+                        groundingStatus = com.example.innovexia.data.ai.GroundingStatus.SEARCHING
+                    )
+                }
+
                 // Stream response with crash-safe handling
                 streamingJob = streamScope.launch {
                     val collector = StreamCollector(
@@ -399,15 +414,6 @@ class ChatViewModel(
                     try {
                         val persona = _selectedPersona.value?.toCorePersona()
                         android.util.Log.d("ChatViewModel", "Sending message with persona: id=${persona?.id}, name=${persona?.name}")
-
-                        // Set initial grounding status if grounding is enabled
-                        if (_groundingEnabled.value) {
-                            android.util.Log.d("ChatViewModel", "🔍 Grounding ENABLED for message $modelMsgId")
-                            _groundingStatusMap.value = _groundingStatusMap.value + (modelMsgId to com.example.innovexia.data.ai.GroundingStatus.SEARCHING)
-                        } else {
-                            android.util.Log.d("ChatViewModel", "❌ Grounding DISABLED for message $modelMsgId")
-                        }
-
                         android.util.Log.d("ChatViewModel", "Sending message with groundingEnabled=${_groundingEnabled.value}")
 
                         geminiService.generateReplyWithTokens(
@@ -415,7 +421,8 @@ class ChatViewModel(
                             userText = text,
                             persona = persona,
                             enableThinking = false,
-                            groundingEnabled = _groundingEnabled.value
+                            groundingEnabled = _groundingEnabled.value,
+                            context = application  // Provide context for location access
                         ).collect { chunk ->
                             collector.onToken(chunk.text)
 
@@ -751,7 +758,8 @@ class ChatViewModel(
                             userText = newText,
                             persona = null,
                             enableThinking = false,
-                            groundingEnabled = _groundingEnabled.value
+                            groundingEnabled = _groundingEnabled.value,
+                            context = application  // Provide context for location access
                         ).collect { chunk ->
                             collector.onToken(chunk.text)
 
@@ -971,7 +979,8 @@ class ChatViewModel(
                     userText = userTurn.text,
                     persona = null,
                     enableThinking = false,
-                    groundingEnabled = _groundingEnabled.value
+                    groundingEnabled = _groundingEnabled.value,
+                    context = application  // Provide context for location access
                 ).collect { chunk ->
                     collector.onToken(chunk.text)
 
@@ -1174,7 +1183,8 @@ class ChatViewModel(
                     userText = continuePrompt,
                     persona = null,
                     enableThinking = false,
-                    groundingEnabled = _groundingEnabled.value
+                    groundingEnabled = _groundingEnabled.value,
+                    context = application  // Provide context for location access
                 ).collect { chunk ->
                     collector.onToken(chunk.text)
 

@@ -286,20 +286,51 @@ class PromptBuilder {
 
         // Build location context if available
         val locationContext = if (location != null) {
+            // Calculate location age for staleness indicator
+            val locationAge = System.currentTimeMillis() - location.time
+            val ageSeconds = locationAge / 1000
+            val ageMinutes = ageSeconds / 60
+            val ageHours = ageMinutes / 60
+
+            val ageString = when {
+                ageSeconds < 60 -> "$ageSeconds seconds ago"
+                ageMinutes < 60 -> "$ageMinutes minutes ago"
+                else -> "$ageHours hours ago"
+            }
+
+            // Determine freshness indicator
+            val freshnessIndicator = when {
+                ageMinutes < 5 -> "🟢 Very Fresh"
+                ageMinutes < 15 -> "🟡 Fresh"
+                ageMinutes < 60 -> "🟠 Somewhat Stale"
+                else -> "🔴 Stale"
+            }
+
             """
 
         **User's Current GPS Location:**
         - Latitude: ${location.latitude}
         - Longitude: ${location.longitude}
         - Accuracy: ±${location.accuracy.toInt()} meters
+        - Last Updated: $ageString ($freshnessIndicator)
 
-        **IMPORTANT**: You HAVE access to the user's real-time GPS location coordinates above. When asked about their location, you can:
-        - Reference these exact coordinates
-        - Describe their general area based on lat/long (but you cannot reverse geocode to exact addresses without external tools)
-        - Provide location-aware responses for weather, time zones, nearby places, etc.
-        - Tell them "You are currently at coordinates (${location.latitude}, ${location.longitude})"
+        **IMPORTANT - How to Use Location Data:**
 
-        DO NOT say you cannot access location data - you have the GPS coordinates right here.
+        You HAVE access to the user's real-time GPS coordinates above. When asked about their location:
+
+        **✅ DO THIS (Natural & Helpful):**
+        - Use grounding/web search to reverse geocode coordinates into city/state/country names
+        - Respond naturally: "You're in Elizabethtown, Kentucky" or "You're in the Louisville area"
+        - If grounding is enabled, search for "reverse geocode ${location.latitude} ${location.longitude}" to find the location name
+        - Provide location-aware responses for weather, time zones, nearby places using the location name
+        - If location is stale (> 15 minutes), acknowledge it might not be perfectly accurate
+
+        **❌ DON'T DO THIS (Robotic & Unhelpful):**
+        - Don't just say raw coordinates like "You're at latitude 37.704305, longitude -85.8712383"
+        - Don't say "Based on those coordinates, you appear to be in..." (too formal)
+        - Don't say "I cannot access location" (YOU CAN - the coordinates are right here)
+
+        **Remember:** Users want to know WHERE they are (city/state), not raw GPS numbers. Use grounding to convert coordinates to human-readable location names.
         """
         } else {
             ""
@@ -3666,6 +3697,41 @@ class PromptBuilder {
                 append("✅ Use casual time references (\"this morning\", \"yesterday\", \"the other day\")\n")
                 append("✅ Keep it SHORT and NATURAL\n")
                 append("✅ Skip the formality - just answer like a normal person would\n\n")
+
+                append("**Handling Temporal/Time-Based Queries - CRITICAL:**\n")
+                append("When the user asks about specific times or dates (\"yesterday\", \"last week\", \"Monday\", \"December 15\"), you MUST prioritize temporal accuracy:\n\n")
+
+                append("**Temporal Query Examples:**\n")
+                append("- \"What did I tell you yesterday?\"\n")
+                append("- \"Show me what we discussed last week\"\n")
+                append("- \"What happened on Monday?\"\n")
+                append("- \"What did I say on December 15th?\"\n")
+                append("- \"What did we talk about this morning?\"\n\n")
+
+                append("**How to Handle Temporal Queries:**\n")
+                append("1. **Look at the timestamps carefully** - They tell you EXACTLY when each memory was created\n")
+                append("2. **Filter memories by time FIRST** - Only look at memories from the requested time period\n")
+                append("3. **Be precise about what you find** - If memories exist for that time, reference them specifically\n")
+                append("4. **Be honest if nothing exists** - If no memories from the requested time, say so clearly\n\n")
+
+                append("**Response Examples for Temporal Queries:**\n")
+                append("✅ PERFECT: \"Yesterday at 3:15 PM, you told me you prefer dark mode and want to switch all your apps to it\"\n")
+                append("✅ PERFECT: \"On Monday morning, we discussed your Android project. You mentioned wanting to add habit tracking\"\n")
+                append("✅ PERFECT: \"Last week you were working on the database schema - specifically on Tuesday at 2:30 PM\"\n")
+                append("✅ PERFECT: \"I don't have any memories from yesterday - we might not have chatted then\"\n")
+                append("✅ PERFECT: \"Nothing from December 15th specifically, but on the 14th you mentioned...\"\n\n")
+
+                append("❌ WRONG: Mixing up times or providing vague responses\n")
+                append("❌ WRONG: Ignoring the time request and just showing recent memories\n")
+                append("❌ WRONG: Saying you remember something from yesterday when it was actually last week\n\n")
+
+                append("**Key Rules for Temporal Accuracy:**\n")
+                append("- **Match timestamps exactly** - \"yesterday\" means the previous 24 hours, \"Monday\" means that specific day\n")
+                append("- **Don't approximate** - If user asks for Monday and you only have Tuesday, say \"I don't have Monday, but on Tuesday...\"\n")
+                append("- **Use the timestamp format** - Memories show precise times like \"[Dec 15, 2024 at 2:30 PM]\" - use that info\n")
+                append("- **Acknowledge gaps** - It's better to say \"I don't have memories from that time\" than to provide wrong timing\n")
+                append("- **Be chronological when listing** - If showing multiple memories from a time range, present them in order\n")
+                append("- **Keep it simple** - For pure temporal lookups (\"what did I say at 7:44am\"), just answer the question. Don't add \"How can I help?\" or follow-up offers unless the context naturally calls for it\n\n")
 
                 append(buildEmotionalIntelligenceFramework(memoryContext))
 append("\n")

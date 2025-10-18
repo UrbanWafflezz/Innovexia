@@ -44,7 +44,9 @@ fun SystemHealthTab(
     onRefresh: () -> Unit,
     onCheckService: (String) -> Unit,
     darkTheme: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    totalIncidents: Int = 0,
+    uptimeSince: Long? = null
 ) {
     Column(
         modifier = modifier
@@ -60,7 +62,9 @@ fun SystemHealthTab(
                 lastRefresh = lastRefresh,
                 isConnected = isConnected,
                 onRefresh = onRefresh,
-                darkTheme = darkTheme
+                darkTheme = darkTheme,
+                totalIncidents = totalIncidents,
+                uptimeSince = uptimeSince
             )
 
         // Connectivity warning
@@ -109,7 +113,9 @@ private fun OverallStatusCard(
     lastRefresh: Long?,
     isConnected: Boolean,
     onRefresh: () -> Unit,
-    darkTheme: Boolean
+    darkTheme: Boolean,
+    totalIncidents: Int = 0,
+    uptimeSince: Long? = null
 ) {
     // Calculate metrics
     val totalServices = checks.size
@@ -245,6 +251,32 @@ private fun OverallStatusCard(
                         darkTheme = darkTheme
                     )
                 }
+            }
+
+            // System trends row (uptime & incidents)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Uptime duration
+                if (uptimeSince != null) {
+                    MetricPill(
+                        label = "Uptime",
+                        value = formatUptimeDuration(System.currentTimeMillis() - uptimeSince),
+                        color = InnovexiaColors.Success,
+                        darkTheme = darkTheme
+                    )
+                }
+
+                // Incident count (last 30 days)
+                MetricPill(
+                    label = "Incidents (30d)",
+                    value = totalIncidents.toString(),
+                    color = if (totalIncidents == 0) InnovexiaColors.Success
+                           else if (totalIncidents < 5) InnovexiaColors.WarningAlt
+                           else InnovexiaColors.ErrorAlt,
+                    darkTheme = darkTheme
+                )
             }
 
             // Loading indicator
@@ -506,46 +538,53 @@ private fun ServiceCard(
 
             // Expanded details
             if (expanded) {
-                Divider(
-                    modifier = Modifier.padding(vertical = 12.dp),
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    thickness = 1.dp,
                     color = if (darkTheme) Color(0xFF2A3441) else Color(0xFFE0E0E0)
                 )
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Service ID
-                    DetailRow(
+                    EnhancedDetailRow(
                         label = "Service ID",
                         value = check.id,
                         icon = "🔑",
                         darkTheme = darkTheme
                     )
 
-                    // Status
-                    DetailRow(
+                    // Status with full width badge
+                    EnhancedDetailRow(
                         label = "Status",
-                        value = check.status.name,
+                        value = check.status.displayName(),
                         icon = when (check.status) {
                             HealthState.ONLINE -> "✅"
                             HealthState.DEGRADED -> "⚠️"
                             HealthState.OFFLINE -> "❌"
                             HealthState.UNKNOWN -> "❓"
                         },
+                        statusColor = check.status.color(),
                         darkTheme = darkTheme
                     )
 
-                    // Latency
+                    // Latency with performance indicator
                     if (check.latencyMs != null) {
-                        DetailRow(
+                        EnhancedDetailRow(
                             label = "Response Time",
                             value = "${check.latencyMs}ms",
                             icon = "⚡",
+                            highlightColor = when {
+                                check.latencyMs < 100 -> InnovexiaColors.Success
+                                check.latencyMs < 500 -> InnovexiaColors.WarningAlt
+                                else -> InnovexiaColors.ErrorAlt
+                            },
                             darkTheme = darkTheme
                         )
                     }
 
                     // Version
                     if (check.version != null) {
-                        DetailRow(
+                        EnhancedDetailRow(
                             label = "Version",
                             value = check.version,
                             icon = "📦",
@@ -553,18 +592,46 @@ private fun ServiceCard(
                         )
                     }
 
-                    // Notes
+                    // Notes in a special card
                     if (!check.notes.isNullOrBlank()) {
-                        DetailRow(
-                            label = "Details",
-                            value = check.notes,
-                            icon = "📝",
-                            darkTheme = darkTheme
-                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (darkTheme) Color(0xFF2A3441) else Color(0xFFF8F9FA)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "📝",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Text(
+                                        text = "Details",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText
+                                    )
+                                }
+                                Text(
+                                    text = check.notes,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
+                                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                                )
+                            }
+                        }
                     }
 
-                    // Last checked
-                    DetailRow(
+                    // Last checked with timestamp
+                    EnhancedDetailRow(
                         label = "Last Checked",
                         value = formatTimestamp(check.lastCheckedAt),
                         icon = "🕒",
@@ -577,37 +644,73 @@ private fun ServiceCard(
 }
 
 @Composable
-private fun DetailRow(
+private fun EnhancedDetailRow(
     label: String,
     value: String,
     icon: String,
-    darkTheme: Boolean
+    darkTheme: Boolean,
+    statusColor: Color? = null,
+    highlightColor: Color? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (darkTheme) Color(0xFF2A3441) else Color(0xFFEEEEEE))
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (darkTheme) Color(0xFF2A3441) else Color(0xFFF8F9FA)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Text(
-            text = icon,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText,
-                fontWeight = FontWeight.Medium
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon in a circle
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        (statusColor ?: highlightColor ?: InnovexiaColors.BlueAccent).copy(alpha = 0.15f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = icon,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            // Label and value
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (darkTheme) DarkColors.SecondaryText else LightColors.SecondaryText,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = statusColor ?: highlightColor ?: (if (darkTheme) DarkColors.PrimaryText else LightColors.PrimaryText),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Status indicator if color provided
+            if (statusColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(statusColor)
+                )
+            }
         }
     }
 }
@@ -691,7 +794,7 @@ private fun HealthState.color() = when (this) {
 }
 
 private fun formatTimestamp(timestamp: Long): String {
-    val formatter = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+    val formatter = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
     return formatter.format(Date(timestamp))
 }
 
@@ -705,5 +808,20 @@ private fun formatDuration(durationMs: Long): String {
         hours > 0 -> "${hours}h ${minutes % 60}m ago"
         minutes > 0 -> "${minutes}m ago"
         else -> "Just now"
+    }
+}
+
+private fun formatUptimeDuration(durationMs: Long): String {
+    val seconds = durationMs / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        days > 30 -> "${days / 30}mo"
+        days > 0 -> "${days}d"
+        hours > 0 -> "${hours}h"
+        minutes > 0 -> "${minutes}m"
+        else -> "${seconds}s"
     }
 }

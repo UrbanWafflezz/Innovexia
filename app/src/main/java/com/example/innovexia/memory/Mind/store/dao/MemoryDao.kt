@@ -49,6 +49,32 @@ interface MemoryDao {
     @Query("SELECT COUNT(*) FROM memories WHERE userId = :userId")
     fun observeTotalCountForUser(userId: String): Flow<Int>
 
+    /**
+     * Get memories within a specific time range, ordered by creation time (chronological)
+     * Useful for temporal queries like "what did I say yesterday" or "show me memories from last week"
+     */
+    @Query("SELECT * FROM memories WHERE personaId = :personaId AND userId = :userId AND createdAt >= :startTimeMs AND createdAt <= :endTimeMs ORDER BY createdAt ASC LIMIT :limit")
+    suspend fun getMemoriesBetweenTimes(
+        personaId: String,
+        userId: String,
+        startTimeMs: Long,
+        endTimeMs: Long,
+        limit: Int
+    ): List<MemoryEntity>
+
+    /**
+     * Get memories for a specific day (24-hour period)
+     * Convenience wrapper around getMemoriesBetweenTimes
+     */
+    @Query("SELECT * FROM memories WHERE personaId = :personaId AND userId = :userId AND createdAt >= :dayStartMs AND createdAt < :dayEndMs ORDER BY createdAt ASC LIMIT :limit")
+    suspend fun getMemoriesForDay(
+        personaId: String,
+        userId: String,
+        dayStartMs: Long,
+        dayEndMs: Long,
+        limit: Int
+    ): List<MemoryEntity>
+
     @Query("UPDATE memories SET lastAccessed = :timestamp WHERE id IN (:ids)")
     suspend fun updateLastAccessed(ids: List<String>, timestamp: Long)
 

@@ -44,6 +44,24 @@ class SystemHealthViewModel(
     val openIncidents: StateFlow<List<IncidentEntity>> = db.incidentDao().observeOpen()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Total incident count (last 30 days)
+    val totalIncidents: StateFlow<Int> = flow {
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        emit(db.incidentDao().observeRecent().first().count { it.startedAt >= thirtyDaysAgo })
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    // System uptime since last major outage
+    val uptimeSince: StateFlow<Long?> = db.incidentDao().observeRecent()
+        .map { incidents ->
+            // Find last resolved major incident (OFFLINE status)
+            val lastMajorIncident = incidents
+                .filter { it.status == "Resolved" && it.impact.contains("OFFLINE", ignoreCase = true) }
+                .maxByOrNull { it.endedAt ?: it.startedAt }
+
+            lastMajorIncident?.endedAt ?: lastMajorIncident?.startedAt
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // Overall health state
     val overallState: StateFlow<HealthState> = _checks.map { checkList ->
         checkList.fold(HealthState.ONLINE) { acc, next ->

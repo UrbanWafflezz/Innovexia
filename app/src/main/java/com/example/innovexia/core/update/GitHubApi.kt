@@ -20,6 +20,12 @@ interface GitHubApi {
         @Path("repo") repo: String
     ): Response<GitHubRelease>
 
+    @GET("repos/{owner}/{repo}/releases")
+    suspend fun getAllReleases(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String
+    ): Response<List<GitHubRelease>>
+
     companion object {
         private const val BASE_URL = "https://api.github.com/"
 

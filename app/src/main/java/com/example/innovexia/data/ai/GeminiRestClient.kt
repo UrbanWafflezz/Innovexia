@@ -117,6 +117,17 @@ class GeminiRestClient {
                 var groundingMetadata: GroundingMetadata? = null
                 var groundingSearchPerformed = false
                 var finishReason: String? = null
+                var searchingStatusEmitted = false
+
+                // Emit initial SEARCHING status if grounding is enabled
+                if (groundingEnabled && !searchingStatusEmitted) {
+                    Log.d(TAG, "🔍 Emitting initial SEARCHING status")
+                    emit(StreamChunk(
+                        text = "",
+                        groundingStatus = GroundingStatus.SEARCHING
+                    ))
+                    searchingStatusEmitted = true
+                }
 
                 // Read lines manually to use emit() in the flow scope
                 var line = reader.readLine()
@@ -148,14 +159,18 @@ class GeminiRestClient {
                                 usage.candidatesTokenCount?.let { latestOutputTokens = it }
                             }
 
-                            // Extract grounding metadata (usually in final chunk)
+                            // Extract grounding metadata (can arrive in any chunk)
                             val currentGroundingStatus = if (groundingEnabled) {
                                 geminiResponse.candidates
                                     ?.firstOrNull()
                                     ?.groundingMetadata?.let { gm ->
                                         groundingSearchPerformed = true
-                                        groundingMetadata = convertGroundingMetadata(gm)
-                                        Log.d(TAG, "✓ Grounding metadata found: ${groundingMetadata?.searchResultUrls?.size ?: 0} sources")
+                                        val newMetadata = convertGroundingMetadata(gm)
+
+                                        // Update grounding metadata (may arrive incrementally)
+                                        groundingMetadata = newMetadata
+
+                                        Log.d(TAG, "✓ Grounding metadata received: ${newMetadata.groundingChunks.size} chunks, ${newMetadata.searchResultUrls.size} URLs")
 
                                         // Log search queries that were performed
                                         gm.webSearchQueries?.let { queries ->
@@ -163,7 +178,7 @@ class GeminiRestClient {
                                         }
 
                                         // Determine status based on results
-                                        if (groundingMetadata?.searchResultUrls?.isNotEmpty() == true) {
+                                        if (newMetadata.searchResultUrls.isNotEmpty() || newMetadata.groundingChunks.isNotEmpty()) {
                                             GroundingStatus.SUCCESS
                                         } else {
                                             GroundingStatus.FAILED
@@ -173,9 +188,13 @@ class GeminiRestClient {
                                 GroundingStatus.NONE
                             }
 
-                            // Emit chunk if we have text OR grounding metadata
-                            // (Grounding metadata may arrive in chunks without text)
-                            if (textChunk.isNotEmpty() || (groundingEnabled && groundingMetadata != null)) {
+                            // Emit chunk if we have text OR grounding metadata OR status update
+                            // This ensures real-time updates during web search
+                            val shouldEmit = textChunk.isNotEmpty() ||
+                                           (groundingEnabled && groundingMetadata != null) ||
+                                           (groundingEnabled && currentGroundingStatus != GroundingStatus.SEARCHING)
+
+                            if (shouldEmit) {
                                 accumulatedText += textChunk
 
                                 emit(StreamChunk(

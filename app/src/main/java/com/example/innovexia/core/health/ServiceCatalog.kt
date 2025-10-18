@@ -32,6 +32,8 @@ object ServiceCatalog {
      * Includes all active services with real-time health checks
      */
     fun load(): List<ServiceDescriptor> = buildList {
+        // ---- Core Local Services ----
+
         // Local Database (Room database health check)
         add(ServiceDescriptor(
             id = "database",
@@ -56,28 +58,70 @@ object ServiceCatalog {
             healthPath = ""
         ))
 
-        // Gemini Bridge (Google Gemini API connectivity test)
-        add(ServiceDescriptor(
-            id = "gemini-bridge",
-            name = "Gemini Bridge",
-            baseUrl = "https://generativelanguage.googleapis.com",
-            healthPath = "/v1beta/models"
-        ))
-
-        // Persona Service (Firebase Firestore connectivity)
-        add(ServiceDescriptor(
-            id = "persona-service",
-            name = "Persona Service",
-            baseUrl = "https://firestore.googleapis.com",
-            healthPath = ""
-        ))
-
         // Rolling Summarizer (local chat summarization)
         add(ServiceDescriptor(
             id = "rolling-summarizer",
             name = "Rolling Summarizer",
             baseUrl = "",
             healthPath = ""
+        ))
+
+        // Location Service (GPS and location cache)
+        add(ServiceDescriptor(
+            id = "location-service",
+            name = "Location Service",
+            baseUrl = "",
+            healthPath = ""
+        ))
+
+        // Storage Monitor (disk space and database size)
+        add(ServiceDescriptor(
+            id = "storage-monitor",
+            name = "Storage Monitor",
+            baseUrl = "",
+            healthPath = ""
+        ))
+
+        // WorkManager (background task scheduler)
+        add(ServiceDescriptor(
+            id = "work-manager",
+            name = "WorkManager",
+            baseUrl = "",
+            healthPath = ""
+        ))
+
+        // ---- External Services ----
+
+        // Gemini Bridge (Google Gemini API connectivity test)
+        add(ServiceDescriptor(
+            id = "gemini-bridge",
+            name = "Gemini AI Bridge",
+            baseUrl = "https://generativelanguage.googleapis.com",
+            healthPath = "/v1beta/models"
+        ))
+
+        // Persona Service (Local persona database)
+        add(ServiceDescriptor(
+            id = "persona-service",
+            name = "Persona Database",
+            baseUrl = "",
+            healthPath = ""
+        ))
+
+        // Firebase Auth (Authentication service)
+        add(ServiceDescriptor(
+            id = "firebase-auth",
+            name = "Firebase Auth",
+            baseUrl = "https://www.googleapis.com",
+            healthPath = ""
+        ))
+
+        // GitHub Update Service (Release API for app updates)
+        add(ServiceDescriptor(
+            id = "github-updates",
+            name = "GitHub Updates",
+            baseUrl = "https://api.github.com",
+            healthPath = "/repos/YOUR_REPO/releases/latest" // Update with actual repo
         ))
     }
 
