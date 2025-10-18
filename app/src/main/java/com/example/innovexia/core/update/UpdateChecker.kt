@@ -29,36 +29,104 @@ class UpdateChecker(private val context: Context) {
         private const val KEY_DISMISSED_VERSION = "dismissed_version"
         private const val KEY_FIRST_DETECTED = "first_detected_timestamp"
         private const val KEY_DETECTED_VERSION = "detected_version"
+        private const val KEY_PENDING_UPDATE_VERSION = "pending_update_version"
+        private const val KEY_PENDING_UPDATE_DOWNLOAD_URL = "pending_update_download_url"
+        private const val KEY_PENDING_UPDATE_NOTES = "pending_update_release_notes"
+        private const val KEY_PENDING_UPDATE_PAGE_URL = "pending_update_page_url"
+        private const val KEY_PENDING_UPDATE_APK_SIZE = "pending_update_apk_size"
 
-        // Check for updates at most once per 15 minutes
-        private const val CHECK_INTERVAL_MS = 15 * 60 * 1000L // 15 minutes
+        // Check for updates on every app launch (no rate limiting for showing updates)
+        // Only rate limit the actual API call to GitHub
+        private const val API_CALL_INTERVAL_MS = 15 * 60 * 1000L // 15 minutes
 
         // Force update after 7 days of first detection
         private const val FORCE_UPDATE_AFTER_MS = 7 * 24 * 60 * 60 * 1000L // 7 days
     }
 
     /**
-     * Check if we should check for updates now
-     * (respects rate limiting and "remind later" preference)
+     * Check if we should make a new API call to GitHub
+     * (respects rate limiting for API calls only)
      */
-    fun shouldCheckForUpdates(): Boolean {
+    private fun shouldMakeApiCall(): Boolean {
         val now = System.currentTimeMillis()
         val lastChecked = prefs.getLong(KEY_LAST_CHECKED, 0L)
-        val remindLaterUntil = prefs.getLong(KEY_REMIND_LATER, 0L)
 
-        // If user clicked "Remind Later", don't check until interval passes
-        if (remindLaterUntil > now) {
-            Log.d(TAG, "User requested remind later, skipping check")
-            return false
-        }
-
-        // Rate limit: only check once per hour
-        if (now - lastChecked < CHECK_INTERVAL_MS) {
-            Log.d(TAG, "Already checked recently, skipping")
+        // Rate limit API calls only (not update notifications)
+        if (now - lastChecked < API_CALL_INTERVAL_MS) {
+            Log.d(TAG, "API call rate limited, using cached update info")
             return false
         }
 
         return true
+    }
+
+    /**
+     * Check if we should show update notification
+     * (respects "remind later" preference only)
+     */
+    fun shouldShowUpdateNotification(): Boolean {
+        val now = System.currentTimeMillis()
+        val remindLaterUntil = prefs.getLong(KEY_REMIND_LATER, 0L)
+
+        // If user clicked "Remind Later", don't show until interval passes
+        if (remindLaterUntil > now) {
+            val hoursLeft = (remindLaterUntil - now) / (60 * 60 * 1000L)
+            Log.d(TAG, "User requested remind later ($hoursLeft hours remaining)")
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * Save pending update info to preferences (persists across app restarts)
+     */
+    private fun savePendingUpdate(updateInfo: UpdateInfo) {
+        prefs.edit()
+            .putString(KEY_PENDING_UPDATE_VERSION, updateInfo.latestVersion)
+            .putString(KEY_PENDING_UPDATE_DOWNLOAD_URL, updateInfo.downloadUrl)
+            .putString(KEY_PENDING_UPDATE_NOTES, updateInfo.releaseNotes)
+            .putString(KEY_PENDING_UPDATE_PAGE_URL, updateInfo.releasePageUrl)
+            .putLong(KEY_PENDING_UPDATE_APK_SIZE, updateInfo.apkSize ?: 0L)
+            .apply()
+        Log.d(TAG, "Saved pending update: ${updateInfo.latestVersion}")
+    }
+
+    /**
+     * Get pending update info from preferences (returns null if none)
+     */
+    fun getPendingUpdate(): UpdateInfo? {
+        val version = prefs.getString(KEY_PENDING_UPDATE_VERSION, null) ?: return null
+        val downloadUrl = prefs.getString(KEY_PENDING_UPDATE_DOWNLOAD_URL, null) ?: return null
+        val notes = prefs.getString(KEY_PENDING_UPDATE_NOTES, null)
+        val pageUrl = prefs.getString(KEY_PENDING_UPDATE_PAGE_URL, null) ?: return null
+        val apkSize = prefs.getLong(KEY_PENDING_UPDATE_APK_SIZE, 0L).takeIf { it > 0 }
+
+        return UpdateInfo(
+            currentVersion = BuildConfig.VERSION_NAME,
+            latestVersion = version,
+            downloadUrl = downloadUrl,
+            releaseNotes = notes,
+            releasePageUrl = pageUrl,
+            apkSize = apkSize
+        )
+    }
+
+    /**
+     * Clear pending update (called when user completes update)
+     */
+    fun clearPendingUpdate() {
+        prefs.edit()
+            .remove(KEY_PENDING_UPDATE_VERSION)
+            .remove(KEY_PENDING_UPDATE_DOWNLOAD_URL)
+            .remove(KEY_PENDING_UPDATE_NOTES)
+            .remove(KEY_PENDING_UPDATE_PAGE_URL)
+            .remove(KEY_PENDING_UPDATE_APK_SIZE)
+            .remove(KEY_DETECTED_VERSION)
+            .remove(KEY_FIRST_DETECTED)
+            .remove(KEY_REMIND_LATER)
+            .apply()
+        Log.d(TAG, "Cleared pending update")
     }
 
     /**
@@ -76,6 +144,16 @@ class UpdateChecker(private val context: Context) {
      */
     suspend fun checkForUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
+            // Check if we should make a new API call or use cached data
+            if (!shouldMakeApiCall()) {
+                // Return cached pending update if available
+                val pendingUpdate = getPendingUpdate()
+                if (pendingUpdate != null) {
+                    Log.d(TAG, "Returning cached pending update: ${pendingUpdate.latestVersion}")
+                    return@withContext UpdateCheckResult.UpdateAvailable(pendingUpdate)
+                }
+            }
+
             Log.d(TAG, "Checking for updates from GitHub...")
 
             // Fetch ALL releases to handle beta/stable properly
@@ -181,6 +259,9 @@ class UpdateChecker(private val context: Context) {
                     .apply()
                 Log.d(TAG, "First time detecting version $latestVersion")
             }
+
+            // Save pending update to persist across app restarts
+            savePendingUpdate(updateInfo)
 
             return@withContext UpdateCheckResult.UpdateAvailable(updateInfo)
 

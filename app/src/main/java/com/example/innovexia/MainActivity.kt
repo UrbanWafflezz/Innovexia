@@ -239,6 +239,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Update session on foreground (throttled to 6 hours)
         updateSessionThrottled()
+
+        // Restore pending update dialog if user went to install permissions
+        restorePendingUpdateDialog()
     }
 
     private fun updateSessionThrottled() {
@@ -260,13 +263,14 @@ class MainActivity : ComponentActivity() {
     private fun checkForUpdates() {
         lifecycleScope.launch {
             try {
-                // Check if forced update is required (7 days passed)
-                val forceUpdate = updateChecker.shouldForceUpdate()
-
-                if (!forceUpdate && !updateChecker.shouldCheckForUpdates()) {
-                    Log.d("MainActivity", "Skipping update check (rate limited or remind later)")
+                // First check if we should show update notification (respects "Remind Later")
+                if (!updateChecker.shouldShowUpdateNotification()) {
+                    Log.d("MainActivity", "Skipping update notification (remind later active)")
                     return@launch
                 }
+
+                // Check if forced update is required (7 days passed)
+                val forceUpdate = updateChecker.shouldForceUpdate()
 
                 Log.d("MainActivity", "Checking for updates... (forced: $forceUpdate)")
                 val result = updateChecker.checkForUpdates()
@@ -301,6 +305,28 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error checking for updates", e)
                 updateCheckError = "Unexpected error: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Restore pending update dialog when app resumes
+     * (e.g., user went to install permissions and came back)
+     */
+    private fun restorePendingUpdateDialog() {
+        // Only restore if no dialog is currently showing and we should show notifications
+        if (updateInfo == null && updateChecker.shouldShowUpdateNotification()) {
+            val pendingUpdate = updateChecker.getPendingUpdate()
+            if (pendingUpdate != null) {
+                Log.d("MainActivity", "Restoring pending update dialog: ${pendingUpdate.latestVersion}")
+                updateInfo = pendingUpdate
+
+                // Also check if APK was already downloaded
+                val downloadedApk = apkDownloader.getDownloadedApk()
+                if (downloadedApk != null && downloadedApk.exists()) {
+                    Log.d("MainActivity", "APK already downloaded, restoring completed state")
+                    downloadState = ApkDownloader.DownloadState.Completed(downloadedApk)
+                }
             }
         }
     }
@@ -355,9 +381,8 @@ class MainActivity : ComponentActivity() {
                         is ApkDownloader.DownloadState.Completed -> {
                             Log.d("MainActivity", "Download completed, starting installation")
                             installApk(state.file)
-                            // Reset state after installation prompt
-                            updateInfo = null
-                            downloadState = ApkDownloader.DownloadState.Idle
+                            // DON'T reset state here - let it persist if user needs to enable install permissions
+                            // It will be cleared when user actually installs the update
                         }
                         is ApkDownloader.DownloadState.Error -> {
                             Log.e("MainActivity", "Download error: ${state.message}")
@@ -388,7 +413,8 @@ class MainActivity : ComponentActivity() {
                         data = Uri.parse("package:$packageName")
                     }
                     startActivity(intent)
-                    Log.w("MainActivity", "Need permission to install APKs")
+                    Log.w("MainActivity", "Need permission to install APKs - dialog will persist on return")
+                    // DON'T clear update info - it will be restored when user comes back
                     return
                 }
             }
@@ -408,6 +434,13 @@ class MainActivity : ComponentActivity() {
 
             Log.d("MainActivity", "Launching APK installer")
             startActivity(intent)
+
+            // Clear pending update only when installer is launched successfully
+            // (User is now in the installation flow, update will complete soon)
+            updateChecker.clearPendingUpdate()
+            updateInfo = null
+            downloadState = ApkDownloader.DownloadState.Idle
+            Log.d("MainActivity", "Cleared pending update - installer launched")
         } catch (e: Exception) {
             Log.e("MainActivity", "Error installing APK", e)
         }
